@@ -13,7 +13,7 @@ Ext.define('CustomChartApp', {
             bucketBy: '',
             stackField: '',
             query: '',
-            searchAllProjects: [{checked: false}]
+            searchAllProjects: false,
         }
     },
 
