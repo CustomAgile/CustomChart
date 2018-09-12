@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CustomChart-1.2.9</title>
+    <title>CustomChart-1.2.10</title>
     <!--  (c) 2017 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Wed Sep 12 2018 14:43:05 GMT+0000 (UTC) -->
+    <!--  Build Date: Wed Sep 12 2018 14:59:22 GMT+0000 (UTC) -->
 
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Sep 12 2018 14:43:05 GMT+0000 (UTC)";
-        var CHECKSUM = 12681620888;
+        var APP_BUILD_DATE = "Wed Sep 12 2018 14:59:22 GMT+0000 (UTC)";
+        var CHECKSUM = 12683137735;
     </script>
 
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
