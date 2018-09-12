@@ -9,8 +9,6 @@ Ext.define('Settings', {
               fieldLabel: 'Scope Across Workspace',
               labelAlign: 'left',
               xtype:'rallycheckboxfield',
-              labelWidth: 150,
-              margin: 10,
               hidden: !config.showSearchAllProjects
             },
             {
