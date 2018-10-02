@@ -21,12 +21,18 @@ Ext.define('CustomChartApp', {
         if (!this.getSetting('types')) {
             this.fireEvent('appsettingsneeded'); //todo: does this work?
         } else {
-            Rally.data.wsapi.ModelFactory.getModels({
-                types: this._getTypesSetting()
-            }).then({
-                success: this._onModelsLoaded,
-                scope: this
-            });
+            Rally.data.util.PortfolioItemHelper.getPortfolioItemTypes().then({
+                scope: this,
+                success: function(portfolioItemTypes) {
+                    this.portfolioItemTypes = portfolioItemTypes;
+                    return Rally.data.wsapi.ModelFactory.getModels({
+                        types: this._getTypesSetting()
+                    }).then({
+                        success: this._onModelsLoaded,
+                        scope: this
+                    });
+                }
+            })
         }
     },
     
@@ -103,6 +109,8 @@ Ext.define('CustomChartApp', {
                         modelNames: modelNames,
                         inlineFilterPanelConfig: {
                             quickFilterPanelConfig: {
+                                portfolioItemTypes: this.portfolioItemTypes,
+                                modelName: modelNames[0],
                                 defaultFields: this._getQuickFilters(),
                                 addQuickFilterConfig: {
                                    whiteListFields: whiteListFields
