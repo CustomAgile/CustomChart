@@ -4,6 +4,8 @@
 
 This app is the chart equivalent of the Custom Board and Custom List apps.  Pick a chart type (pie, bar or column), an object type, and a field to be aggregated and gain insight into your process via the generated chart.  Use the advanced filtering control to further slice and dice your data.  The data is also exportable for more fine grained inspection.
 
+Additionally, items can be filtered by an ancestor portfolio item. (e.g. filter Features that are ultimately children of the higher level Theme).
+
 ![custom chart screenshot](images/CustomChart.png "Custom Chart Screenshot")
 
 ## Installation and Settings
