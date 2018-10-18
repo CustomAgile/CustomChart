@@ -1,12 +1,15 @@
 {
   "name": "CustomChart",
-  "version": "1.2.15",
+  "version": "1.2.16",
   "scripts": {
     "debug": "grunt debug",
     "debug:watch": "nodemon --exec grunt debug",
     "deploy:watch": "nodemon --exec grunt deploy",
     "deploy-pretty:watch": "nodemon --exec grunt deploy-pretty",
     "deploy-debugsdk:watch": "nodemon --exec grunt deploy-debugsdk"
+  },
+  "dependencies": {
+    "@agile-central-technical-services/utils-ancestor-pi-inline-filter": "^1.0.12"
   },
   "devDependencies": {
     "grunt": "~0.4.5",
@@ -30,8 +33,5 @@
       "*.json"
     ],
     "verbose": true
-  },
-  "dependencies": {
-    "@agile-central-technical-services/utils-ancestor-pi-inline-filter": "^1.0.8"
   }
 }
