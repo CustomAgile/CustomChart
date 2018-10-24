@@ -200,6 +200,6 @@ Ext.define('Calculator', {
     },
 
     _getValueFieldForCalculationType: function() {
-        return Utils.getFieldForAggregationType(this.calculationType);
+        return ChartUtils.getFieldForAggregationType(this.calculationType);
     }
 });

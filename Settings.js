@@ -206,7 +206,7 @@ Ext.define('Settings', {
                             success: function(model) {
                                 this.store.filterBy(function(record) {
                                     return record.get('value') === 'count' ||
-                                        model.hasField(Utils.getFieldForAggregationType(record.get('value')));
+                                        model.hasField(ChartUtils.getFieldForAggregationType(record.get('value')));
                                 });
                                 if (!this.store.findRecord('value', this.getValue())) {
                                     this.setValue('count');
