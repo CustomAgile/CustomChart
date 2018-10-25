@@ -2,8 +2,26 @@ Ext.define('CustomChartApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
 
-    layout: 'fit',
+    layout: {
+        type: 'vbox',
+        align: 'stretch'
+    },
 
+    items: [{
+        id: Utils.AncestorPiAppFilter.RENDER_AREA_ID,
+        xtype: 'container',
+        layout: {
+            type: 'hbox',
+            align: 'middle',
+            defaultMargins: '0 10 10 0',
+        }
+    }, {
+        id: 'grid-area',
+        xtype: 'container',
+        flex: 1,
+        type: 'vbox',
+        align: 'stretch'
+    }],
     config: {
         defaultSettings: {
             types: 'Defect',
@@ -20,74 +38,117 @@ Ext.define('CustomChartApp', {
     launch: function() {
         if (!this.getSetting('types')) {
             this.fireEvent('appsettingsneeded'); //todo: does this work?
-        } else {
-            Rally.data.util.PortfolioItemHelper.getPortfolioItemTypes().then({
-                scope: this,
-                success: function(portfolioItemTypes) {
-                    this.portfolioItemTypes = portfolioItemTypes;
-                    return Rally.data.wsapi.ModelFactory.getModels({
-                        types: this._getTypesSetting()
-                    }).then({
-                        success: this._onModelsLoaded,
-                        scope: this
-                    });
+        }
+        else {
+            this.ancestorFilterPlugin = Ext.create('Utils.AncestorPiAppFilter', {
+                ptype: 'UtilsAncestorPiAppFilter',
+                pluginId: 'ancestorFilterPlugin',
+                settingsConfig: {
+                    //labelWidth: 150,
+                    //margin: 10
+                },
+                listeners: {
+                    scope: this,
+                    ready: function(plugin) {
+                        Rally.data.util.PortfolioItemHelper.getPortfolioItemTypes().then({
+                            scope: this,
+                            success: function(portfolioItemTypes) {
+                                this.portfolioItemTypes = portfolioItemTypes;
+                                return Rally.data.wsapi.ModelFactory.getModels({
+                                    types: this._getTypesSetting()
+                                })
+                            }
+                        }).then({
+                            success: this._onModelsLoaded,
+                            scope: this
+                        }).then({
+                            scope: this,
+                            success: function() {
+                                plugin.addListener({
+                                    scope: this,
+                                    select: function() {
+                                        this._addChart();
+                                    }
+                                });
+                                this._addChart();
+                            }
+                        })
+                    },
                 }
-            })
+            });
+            this.addPlugin(this.ancestorFilterPlugin);
         }
     },
-    
+
+    // Usual monkey business to size gridboards
+    onResize: function() {
+        this.callParent(arguments);
+        var gridArea = this.down('#grid-area');
+        var gridboard = this.down('rallygridboard');
+        if (gridArea && gridboard) {
+            gridboard.setHeight(gridArea.getHeight())
+        }
+    },
+
     isMilestoneScoped: function() {
         var result = false;
-        
+
         var tbscope = this.getContext().getTimeboxScope();
         if (tbscope && tbscope.getType() == 'milestone') {
             result = true;
         }
         return result
     },
-    
+
     searchAllProjects: function() {
         var searchAllProjects = this.getSetting('searchAllProjects');
         return this.isMilestoneScoped() && searchAllProjects;
     },
 
     getSettingsFields: function() {
-       return Settings.getSettingsFields({
-           context: this.getContext(),
-           showSearchAllProjects: this.isMilestoneScoped()
-       });
+        return Settings.getSettingsFields({
+            context: this.getContext(),
+            showSearchAllProjects: this.isMilestoneScoped()
+        });
     },
 
     _shouldLoadAllowedStackValues: function(stackingField) {
-      var hasAllowedValues = stackingField && stackingField.hasAllowedValues(), 
-          shouldLoadAllowedValues = hasAllowedValues && (
-            _.contains(['state', 'rating', 'string'], stackingField.getType()) ||
-            stackingField.getAllowedValueType() === 'state' ||
-            stackingField.getAllowedValueType() === 'flowstate'
-          );
-      return shouldLoadAllowedValues;
+        var hasAllowedValues = stackingField && stackingField.hasAllowedValues(),
+            shouldLoadAllowedValues = hasAllowedValues && (
+                _.contains(['state', 'rating', 'string'], stackingField.getType()) ||
+                stackingField.getAllowedValueType() === 'state' ||
+                stackingField.getAllowedValueType() === 'flowstate'
+            );
+        return shouldLoadAllowedValues;
     },
 
     _onModelsLoaded: function(models) {
+        var deferred = Ext.create('Deft.Deferred');
+        var result = deferred.promise;
+
         this.models = _.values(models);
         var model = this.models[0],
             stackingSetting = this._getStackingSetting(),
             stackingField = stackingSetting && model.getField(stackingSetting);
-            
+
         if (this._shouldLoadAllowedStackValues(stackingField)) {
-            stackingField.getAllowedValueStore().load().then({
+            result = stackingField.getAllowedValueStore().load().then({
                 success: function(records) {
                     this.stackValues = _.invoke(records, 'get', 'StringValue');
-                    this._addChart();
                 },
                 scope: this
             });
-        } else {
-            this._addChart();
         }
+        else {
+            deferred.resolve();
+        }
+        return result;
     },
 
     _addChart: function() {
+        var gridArea = this.down('#grid-area')
+        gridArea.removeAll();
+
         var context = this.getContext();
         var dataContext = context.getDataContext();
         if (this.searchAllProjects()) {
@@ -98,52 +159,54 @@ Ext.define('CustomChartApp', {
             gridBoardConfig = {
                 xtype: 'rallygridboard',
                 toggleState: 'chart',
+                height: gridArea.getHeight(),
                 chartConfig: this._getChartConfig(),
                 plugins: [{
-                    ptype:'rallygridboardinlinefiltercontrol',
-                    showInChartMode: true,
-                    inlineFilterButtonConfig: {
-                        stateful: true,
-                        stateId: context.getScopedStateId('filters'),
-                        filterChildren: true,
-                        modelNames: modelNames,
-                        inlineFilterPanelConfig: {
-                            quickFilterPanelConfig: {
-                                portfolioItemTypes: this.portfolioItemTypes,
-                                modelName: modelNames[0],
-                                defaultFields: this._getQuickFilters(),
-                                addQuickFilterConfig: {
-                                   whiteListFields: whiteListFields
+                        ptype: 'rallygridboardinlinefiltercontrol',
+                        showInChartMode: true,
+                        inlineFilterButtonConfig: {
+                            stateful: true,
+                            stateId: context.getScopedStateId('filters'),
+                            filterChildren: true,
+                            modelNames: modelNames,
+                            inlineFilterPanelConfig: {
+                                quickFilterPanelConfig: {
+                                    portfolioItemTypes: this.portfolioItemTypes,
+                                    modelName: modelNames[0],
+                                    defaultFields: this._getQuickFilters(),
+                                    addQuickFilterConfig: {
+                                        whiteListFields: whiteListFields
+                                    }
+                                },
+                                advancedFilterPanelConfig: {
+                                    advancedFilterRowsConfig: {
+                                        propertyFieldConfig: {
+                                            whiteListFields: whiteListFields
+                                        }
+                                    }
                                 }
+                            }
+                        }
+                    },
+                    {
+                        ptype: 'rallygridboardactionsmenu',
+                        menuItems: [{
+                            text: 'Export to CSV...',
+                            handler: function() {
+                                window.location = Rally.ui.gridboard.Export.buildCsvExportUrl(this.down('rallygridboard').getGridOrBoard());
                             },
-                            advancedFilterPanelConfig: {
-                               advancedFilterRowsConfig: {
-                                   propertyFieldConfig: {
-                                       whiteListFields: whiteListFields
-                                   }
-                               }
-                           }
+                            scope: this
+                        }],
+                        buttonConfig: {
+                            iconCls: 'icon-export',
+                            toolTipConfig: {
+                                html: 'Export',
+                                anchor: 'top',
+                                hideDelay: 0
+                            }
                         }
                     }
-                },
-                {
-                    ptype: 'rallygridboardactionsmenu',
-                    menuItems: [{
-                        text: 'Export to CSV...',
-                        handler: function() {
-                            window.location = Rally.ui.gridboard.Export.buildCsvExportUrl(this.down('rallygridboard').getGridOrBoard());
-                        },
-                        scope: this
-                    }],
-                    buttonConfig: {
-                        iconCls: 'icon-export',
-                        toolTipConfig: {
-                            html: 'Export',
-                            anchor: 'top',
-                            hideDelay: 0
-                        }
-                    }
-                }],
+                ],
                 context: context,
                 modelNames: modelNames,
                 storeConfig: {
@@ -152,7 +215,7 @@ Ext.define('CustomChartApp', {
                 }
             };
 
-        this.add(gridBoardConfig);
+        gridArea.add(gridBoardConfig);
     },
 
     _getQuickFilters: function() {
@@ -185,16 +248,16 @@ Ext.define('CustomChartApp', {
                 xtype: chartType,
                 enableStacking: !!stackField,
                 chartColors: [
-                "#FF8200", // $orange
-                "#F6A900", // $gold
-                "#FAD200", // $yellow
-                "#8DC63F", // $lime
-                "#1E7C00", // $green_dk
-                "#337EC6", // $blue_link
-                "#005EB8", // $blue
-                "#7832A5", // $purple,
-                "#DA1884",  // $pink,
-                "#C0C0C0" // $grey4
+                    "#FF8200", // $orange
+                    "#F6A900", // $gold
+                    "#FAD200", // $yellow
+                    "#8DC63F", // $lime
+                    "#1E7C00", // $green_dk
+                    "#337EC6", // $blue_link
+                    "#005EB8", // $blue
+                    "#7832A5", // $purple,
+                    "#DA1884", // $pink,
+                    "#C0C0C0" // $grey4
                 ],
                 storeConfig: {
                     context: this.getContext().getDataContext(),
@@ -217,7 +280,8 @@ Ext.define('CustomChartApp', {
         if (model.isArtifact()) {
             config.storeConfig.models = this._getTypesSetting();
             config.storeType = 'Rally.data.wsapi.artifact.Store';
-        } else {
+        }
+        else {
             config.storeConfig.model = model;
             config.storeType = 'Rally.data.wsapi.Store';
         }
@@ -227,12 +291,6 @@ Ext.define('CustomChartApp', {
 
     onTimeboxScopeChange: function() {
         this.callParent(arguments);
-
-        var gridBoard = this.down('rallygridboard');
-        if (gridBoard) {
-            gridBoard.destroy();
-        }
-
         this._addChart();
     },
 
@@ -243,7 +301,7 @@ Ext.define('CustomChartApp', {
             fetch = ['FormattedID', 'Name', field];
 
         if (aggregationType !== 'count') {
-            fetch.push(Utils.getFieldForAggregationType(aggregationType));
+            fetch.push(ChartUtils.getFieldForAggregationType(aggregationType));
         }
         if (stackField) {
             fetch.push(stackField);
@@ -283,6 +341,10 @@ Ext.define('CustomChartApp', {
         }
         if (timeboxScope && _.any(this.models, timeboxScope.isApplicable, timeboxScope)) {
             queries.push(timeboxScope.getQueryFilter());
+        }
+        var ancestorFilter = this.ancestorFilterPlugin.getFilterForType(this.models[0].typePath);
+        if (ancestorFilter) {
+            queries.push(ancestorFilter);
         }
         return queries;
     }

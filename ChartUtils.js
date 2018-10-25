@@ -1,8 +1,8 @@
-Ext.define('Utils', {
+Ext.define('ChartUtils', {
     singleton: true,
 
     getFieldForAggregationType: function(aggregationType) {
-        switch(aggregationType) {
+        switch (aggregationType) {
             case 'acceptedleafcount':
                 return 'AcceptedLeafStoryCount';
             case 'acceptedleafplanest':
