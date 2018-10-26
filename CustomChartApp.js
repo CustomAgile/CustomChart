@@ -30,8 +30,7 @@ Ext.define('CustomChartApp', {
             aggregationType: 'count',
             bucketBy: '',
             stackField: '',
-            query: '',
-            searchAllProjects: false,
+            query: ''
         }
     },
 
@@ -90,25 +89,13 @@ Ext.define('CustomChartApp', {
         }
     },
 
-    isMilestoneScoped: function() {
-        var result = false;
-
-        var tbscope = this.getContext().getTimeboxScope();
-        if (tbscope && tbscope.getType() == 'milestone') {
-            result = true;
-        }
-        return result
-    },
-
     searchAllProjects: function() {
-        var searchAllProjects = this.getSetting('searchAllProjects');
-        return this.isMilestoneScoped() && searchAllProjects;
+        return this.ancestorFilterPlugin.getIgnoreProjectScope();
     },
 
     getSettingsFields: function() {
         return Settings.getSettingsFields({
-            context: this.getContext(),
-            showSearchAllProjects: this.isMilestoneScoped()
+            context: this.getContext()
         });
     },
 

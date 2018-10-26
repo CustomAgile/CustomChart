@@ -2,16 +2,7 @@ Ext.define('Settings', {
     singleton: true,
 
     getSettingsFields: function(config) {
-         return [
-            {
-              id:'searchAllProjects',
-              name:'searchAllProjects',
-              fieldLabel: 'Scope Across Workspace',
-              labelAlign: 'left',
-              xtype:'rallycheckboxfield',
-              hidden: !config.showSearchAllProjects
-            },
-            {
+        return [{
                 name: 'chartType',
                 xtype: 'rallycombobox',
                 plugins: ['rallyfieldvalidationui'],
@@ -24,18 +15,18 @@ Ext.define('Settings', {
                     fields: ['name', 'value'],
                     data: [
                         { name: 'Bar', value: 'barchart' },
-                        { name: 'Column', value: 'columnchart'},
+                        { name: 'Column', value: 'columnchart' },
                         { name: 'Pie', value: 'piechart' },
                     ]
                 }),
                 listeners: {
-                    change: function (combo) {
+                    change: function(combo) {
                         combo.fireEvent('chartselected', combo.getValue(), combo.context);
                     }
                 },
                 bubbleEvents: ['chartselected'],
                 handlesEvents: {
-                    typeselected: function () {
+                    typeselected: function() {
                         this.fireEvent('chartselected', this.getValue());
                     }
                 },
@@ -67,17 +58,17 @@ Ext.define('Settings', {
                 displayField: 'DisplayName',
                 valueField: 'TypePath',
                 listeners: {
-                    change: function (combo) {
+                    change: function(combo) {
                         combo.fireEvent('typeselected', combo.getValue(), combo.context);
                     },
-                    ready: function (combo) {
-                      combo.fireEvent('typeselected', combo.getValue(), combo.context);
+                    ready: function(combo) {
+                        combo.fireEvent('typeselected', combo.getValue(), combo.context);
                     }
                 },
                 bubbleEvents: ['typeselected'],
                 readyEvent: 'ready',
                 handlesEvents: {
-                    projectscopechanged: function (context) {
+                    projectscopechanged: function(context) {
                         this.refreshWithNewContext(context);
                     }
                 }
@@ -93,11 +84,12 @@ Ext.define('Settings', {
                 validateOnBlur: false,
                 width: 300,
                 handlesEvents: {
-                    typeselected: function (models, context) {
+                    typeselected: function(models, context) {
                         var type = Ext.Array.from(models)[0];
                         if (type) {
                             this.refreshWithNewModelType(type, context); //todo: how to handle multiple models
-                        } else {
+                        }
+                        else {
                             this.store.removeAll();
                             this.reset();
                         }
@@ -105,20 +97,20 @@ Ext.define('Settings', {
                 },
                 bubbleEvents: ['fieldselected'],
                 listeners: {
-                    change: function (combo) {
+                    change: function(combo) {
                         if (combo.getRecord()) {
                             combo.fireEvent('fieldselected', combo.getRecord().get('fieldDefinition'));
                         }
                     },
-                    ready: function (combo) {
-                        combo.store.filterBy(function (record) {
+                    ready: function(combo) {
+                        combo.store.filterBy(function(record) {
                             var field = record.get('fieldDefinition'),
                                 attr = field.attributeDefinition,
                                 whiteList = ['Tags', 'Milestones'];
                             return attr && !attr.Hidden && (((attr.AttributeType !== 'COLLECTION' || field.isMultiValueCustom()) &&
                                 !field.isMappedFromArtifact) || _.contains(whiteList, field.name));
                         });
-                        var fields = Ext.Array.map(combo.store.getRange(), function (record) {
+                        var fields = Ext.Array.map(combo.store.getRange(), function(record) {
                             return record.get(combo.getValueField());
                         });
 
@@ -157,7 +149,8 @@ Ext.define('Settings', {
                 toggleVisibility: function() {
                     if (this.selectedFieldType === 'date' && this.selectedChartType !== 'piechart') {
                         this.show();
-                      } else {
+                    }
+                    else {
                         this.hide();
                     }
                 },
@@ -166,7 +159,7 @@ Ext.define('Settings', {
                         this.selectedFieldType = field.getType();
                         this.toggleVisibility();
                     },
-                    chartselected: function (type) {
+                    chartselected: function(type) {
                         this.selectedChartType = type;
                         this.toggleVisibility();
                     }
@@ -193,13 +186,13 @@ Ext.define('Settings', {
                         { name: 'Leaf Story Plan Estimate Total', value: 'leafplanest' },
                         { name: 'Preliminary Estimate Total', value: 'prelimest' },
                         { name: 'Refined Estimate Total', value: 'refinedest' },
-                        { name: 'Actuals Total', value: 'taskactuals'},
-                        { name: 'Estimate Total', value: 'taskest'}
+                        { name: 'Actuals Total', value: 'taskactuals' },
+                        { name: 'Estimate Total', value: 'taskest' }
                     ]
                 },
                 lastQuery: '',
                 handlesEvents: {
-                    typeselected: function (types) {
+                    typeselected: function(types) {
                         var type = Ext.Array.from(types)[0];
                         Rally.data.ModelFactory.getModel({
                             type: type,
@@ -235,15 +228,16 @@ Ext.define('Settings', {
                     if (chartType === 'piechart') {
                         this.hide();
                         this.select(this.store.getRange()[0]);
-                    } else {
+                    }
+                    else {
                         this.show();
                     }
                 },
                 handlesEvents: {
-                    chartselected: function (chartType) {
+                    chartselected: function(chartType) {
                         this.toggleVisibility(chartType);
                     },
-                    typeselected: function (models, context) {
+                    typeselected: function(models, context) {
                         var type = Ext.Array.from(models)[0];
                         if (type) {
                             this.refreshWithNewModelType(type, context); //todo: how to handle multiple models
@@ -251,8 +245,8 @@ Ext.define('Settings', {
                     }
                 },
                 listeners: {
-                    ready: function (combo) {
-                        combo.store.filterBy(function (record) {
+                    ready: function(combo) {
+                        combo.store.filterBy(function(record) {
                             var field = record.get('fieldDefinition'),
                                 attr = field.attributeDefinition;
 
@@ -260,7 +254,7 @@ Ext.define('Settings', {
                                 (attr && !attr.Hidden && field.hasAllowedValues() && !_.contains(['collection'], field.getType()));
                         });
 
-                        var fields = Ext.Array.map(combo.store.getRange(), function (record) {
+                        var fields = Ext.Array.map(combo.store.getRange(), function(record) {
                             return record.get(combo.getValueField());
                         });
 
