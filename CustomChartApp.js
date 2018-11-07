@@ -233,19 +233,19 @@ Ext.define('CustomChartApp', {
             model = this.models[0],
             config = {
                 xtype: chartType,
-                enableStacking: !!stackField,
-                chartColors: [
-                    "#FF8200", // $orange
-                    "#F6A900", // $gold
-                    "#FAD200", // $yellow
-                    "#8DC63F", // $lime
-                    "#1E7C00", // $green_dk
-                    "#337EC6", // $blue_link
-                    "#005EB8", // $blue
-                    "#7832A5", // $purple,
-                    "#DA1884", // $pink,
-                    "#C0C0C0" // $grey4
-                ],
+                    enableStacking: !!stackField,
+                    chartColors: [
+                        "#FF8200", // $orange
+                        "#F6A900", // $gold
+                        "#FAD200", // $yellow
+                        "#8DC63F", // $lime
+                        "#1E7C00", // $green_dk
+                        "#337EC6", // $blue_link
+                        "#005EB8", // $blue
+                        "#7832A5", // $purple,
+                        "#DA1884", // $pink,
+                        "#C0C0C0" // $grey4
+                    ],
                 storeConfig: {
                     context: this.getContext().getDataContext(),
                     //TODO: can we do summary fetch here and not limit infinity?

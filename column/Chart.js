@@ -45,7 +45,7 @@ Ext.define('ColumnChart', {
 
         this.chartConfig.plotOptions.column.showInLegend = this.enableStacking;
         this.chartConfig.plotOptions.column.colorByPoint = !this.enableStacking;
-        
+
         if (!this.enableStacking) {
             this.chartConfig.tooltip = {
                 headerFormat: '',
