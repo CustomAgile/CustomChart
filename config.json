@@ -6,6 +6,7 @@
         "Overrides.js",
         "node_modules/@agile-central-technical-services/utils-ancestor-pi-app-filter/index.js",
         "node_modules/@agile-central-technical-services/utils-ancestor-pi-inline-filter/index.js",
+        "Config.js",
         "ChartUtils.js",
         "Calculator.js",
         "bar/Calculator.js",
