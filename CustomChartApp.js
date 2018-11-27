@@ -133,6 +133,14 @@ Ext.define('CustomChartApp', {
     },
 
     _addChart: function() {
+        // If there is a current chart store, force it to stop loading pages
+        // Note that recreating the grid will then create a new chart store with
+        // the same store ID.
+        var chartStore = Ext.getStore('chartStore');
+        if (chartStore) {
+            chartStore.cancelLoad();
+        }
+
         var gridArea = this.down('#grid-area')
         gridArea.removeAll();
 
@@ -202,7 +210,7 @@ Ext.define('CustomChartApp', {
                 }
             };
 
-        gridArea.add(gridBoardConfig);
+        this.gridboard = gridArea.add(gridBoardConfig);
     },
 
     _getQuickFilters: function() {
@@ -233,20 +241,21 @@ Ext.define('CustomChartApp', {
             model = this.models[0],
             config = {
                 xtype: chartType,
-                    enableStacking: !!stackField,
-                    chartColors: [
-                        "#FF8200", // $orange
-                        "#F6A900", // $gold
-                        "#FAD200", // $yellow
-                        "#8DC63F", // $lime
-                        "#1E7C00", // $green_dk
-                        "#337EC6", // $blue_link
-                        "#005EB8", // $blue
-                        "#7832A5", // $purple,
-                        "#DA1884", // $pink,
-                        "#C0C0C0" // $grey4
-                    ],
+                enableStacking: !!stackField,
+                chartColors: [
+                    "#FF8200", // $orange
+                    "#F6A900", // $gold
+                    "#FAD200", // $yellow
+                    "#8DC63F", // $lime
+                    "#1E7C00", // $green_dk
+                    "#337EC6", // $blue_link
+                    "#005EB8", // $blue
+                    "#7832A5", // $purple,
+                    "#DA1884", // $pink,
+                    "#C0C0C0" // $grey4
+                ],
                 storeConfig: {
+                    storeId: 'chartStore',
                     context: this.getContext().getDataContext(),
                     //TODO: can we do summary fetch here and not limit infinity?
                     //we'll have to also make sure the fetch is correct for export somehow...
