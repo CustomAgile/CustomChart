@@ -5,7 +5,7 @@
     "javascript": [
         "Overrides.js",
         "node_modules/@agile-central-technical-services/utils-cancel-store-load/index.js",
-        "node_modules/@agile-central-technical-services/utils-ancestor-pi-app-filter/index.js",
+        "node_modules/@customagile/ancestor-pi-multi-level-pi-app-filter/index.js",
         "node_modules/@agile-central-technical-services/utils-ancestor-pi-inline-filter/index.js",
         "Config.js",
         "ChartUtils.js",
@@ -20,6 +20,7 @@
         "CustomChartApp.js"
     ],
     "css": [
-        "app.css"
+        "app.css",
+        "node_modules/@customagile/ancestor-pi-multi-level-pi-app-filter/index.css"
     ]
 }

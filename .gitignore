@@ -8,5 +8,3 @@ auth.json*
 #test files
 _SpecRunner.html
 .grunt
-deploy/
--deploy/Ugly.txt

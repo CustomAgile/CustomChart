@@ -16,6 +16,14 @@ Ext.define('CustomChartApp', {
             defaultMargins: '0 10 10 0',
         }
     }, {
+        id: Utils.AncestorPiAppFilter.PANEL_RENDER_AREA_ID,
+        xtype: 'container',
+        layout: {
+            type: 'hbox',
+            align: 'middle',
+            defaultMargins: '0 10 10 0',
+        }
+    }, {
         id: 'grid-area',
         xtype: 'container',
         flex: 1,
@@ -34,7 +42,7 @@ Ext.define('CustomChartApp', {
         }
     },
 
-    launch: function() {
+    launch: function () {
         if (!this.getSetting('types')) {
             this.fireEvent('appsettingsneeded'); //todo: does this work?
         }
@@ -42,32 +50,31 @@ Ext.define('CustomChartApp', {
             this.ancestorFilterPlugin = Ext.create('Utils.AncestorPiAppFilter', {
                 ptype: 'UtilsAncestorPiAppFilter',
                 pluginId: 'ancestorFilterPlugin',
-                settingsConfig: {
-                    //labelWidth: 150,
-                    //margin: 10
-                },
+                settingsConfig: {},
+                filtersHidden: false,
+                whiteListFields: ['Milestones', 'Tags'],
+                filterChildren: true,
                 listeners: {
                     scope: this,
-                    ready: function(plugin) {
+                    ready: function (plugin) {
                         Rally.data.util.PortfolioItemHelper.getPortfolioItemTypes().then({
                             scope: this,
-                            success: function(portfolioItemTypes) {
+                            success: function (portfolioItemTypes) {
                                 this.portfolioItemTypes = portfolioItemTypes;
                                 return Rally.data.wsapi.ModelFactory.getModels({
                                     types: this._getTypesSetting()
-                                })
+                                });
                             }
                         }).then({
                             success: this._onModelsLoaded,
                             scope: this
                         }).then({
                             scope: this,
-                            success: function() {
+                            success: function () {
                                 plugin.addListener({
                                     scope: this,
-                                    select: function() {
-                                        this._addChart();
-                                    }
+                                    select: this._addChart,
+                                    change: this._addChart
                                 });
                                 this._addChart();
                             }
@@ -80,7 +87,7 @@ Ext.define('CustomChartApp', {
     },
 
     // Usual monkey business to size gridboards
-    onResize: function() {
+    onResize: function () {
         this.callParent(arguments);
         var gridArea = this.down('#grid-area');
         var gridboard = this.down('rallygridboard');
@@ -89,17 +96,17 @@ Ext.define('CustomChartApp', {
         }
     },
 
-    searchAllProjects: function() {
+    searchAllProjects: function () {
         return this.ancestorFilterPlugin.getIgnoreProjectScope();
     },
 
-    getSettingsFields: function() {
+    getSettingsFields: function () {
         return Settings.getSettingsFields({
             context: this.getContext()
         });
     },
 
-    _shouldLoadAllowedStackValues: function(stackingField) {
+    _shouldLoadAllowedStackValues: function (stackingField) {
         var hasAllowedValues = stackingField && stackingField.hasAllowedValues(),
             shouldLoadAllowedValues = hasAllowedValues && (
                 _.contains(['state', 'rating', 'string'], stackingField.getType()) ||
@@ -109,7 +116,7 @@ Ext.define('CustomChartApp', {
         return shouldLoadAllowedValues;
     },
 
-    _onModelsLoaded: function(models) {
+    _onModelsLoaded: function (models) {
         var deferred = Ext.create('Deft.Deferred');
         var result = deferred.promise;
 
@@ -120,7 +127,7 @@ Ext.define('CustomChartApp', {
 
         if (this._shouldLoadAllowedStackValues(stackingField)) {
             result = stackingField.getAllowedValueStore().load().then({
-                success: function(records) {
+                success: function (records) {
                     this.stackValues = _.invoke(records, 'get', 'StringValue');
                 },
                 scope: this
@@ -132,7 +139,7 @@ Ext.define('CustomChartApp', {
         return result;
     },
 
-    _addChart: function() {
+    _addChart: function () {
         // If there is a current chart store, force it to stop loading pages
         // Note that recreating the grid will then create a new chart store with
         // the same store ID.
@@ -141,7 +148,7 @@ Ext.define('CustomChartApp', {
             chartStore.cancelLoad();
         }
 
-        var gridArea = this.down('#grid-area')
+        var gridArea = this.down('#grid-area');
         gridArea.removeAll();
 
         var context = this.getContext();
@@ -157,51 +164,23 @@ Ext.define('CustomChartApp', {
                 height: gridArea.getHeight(),
                 chartConfig: this._getChartConfig(),
                 plugins: [{
-                        ptype: 'rallygridboardinlinefiltercontrol',
-                        showInChartMode: true,
-                        inlineFilterButtonConfig: {
-                            stateful: true,
-                            stateId: context.getScopedStateId('filters'),
-                            filterChildren: true,
-                            modelNames: modelNames,
-                            inlineFilterPanelConfig: {
-                                quickFilterPanelConfig: {
-                                    portfolioItemTypes: this.portfolioItemTypes,
-                                    modelName: modelNames[0],
-                                    defaultFields: this._getQuickFilters(),
-                                    addQuickFilterConfig: {
-                                        whiteListFields: whiteListFields
-                                    }
-                                },
-                                advancedFilterPanelConfig: {
-                                    advancedFilterRowsConfig: {
-                                        propertyFieldConfig: {
-                                            whiteListFields: whiteListFields
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    {
-                        ptype: 'rallygridboardactionsmenu',
-                        menuItems: [{
-                            text: 'Export to CSV...',
-                            handler: function() {
-                                window.location = Rally.ui.gridboard.Export.buildCsvExportUrl(this.down('rallygridboard').getGridOrBoard());
-                            },
-                            scope: this
-                        }],
-                        buttonConfig: {
-                            iconCls: 'icon-export',
-                            toolTipConfig: {
-                                html: 'Export',
-                                anchor: 'top',
-                                hideDelay: 0
-                            }
+                    ptype: 'rallygridboardactionsmenu',
+                    menuItems: [{
+                        text: 'Export to CSV...',
+                        handler: function () {
+                            window.location = Rally.ui.gridboard.Export.buildCsvExportUrl(this.down('rallygridboard').getGridOrBoard());
+                        },
+                        scope: this
+                    }],
+                    buttonConfig: {
+                        iconCls: 'icon-export',
+                        toolTipConfig: {
+                            html: 'Export',
+                            anchor: 'top',
+                            hideDelay: 0
                         }
                     }
-                ],
+                }],
                 context: context,
                 modelNames: modelNames,
                 storeConfig: {
@@ -213,28 +192,28 @@ Ext.define('CustomChartApp', {
         this.gridboard = gridArea.add(gridBoardConfig);
     },
 
-    _getQuickFilters: function() {
+    _getQuickFilters: function () {
         var quickFilters = ['Owner', 'State', 'ScheduleState'],
             model = this.models[0];
         if (this.models.length > 1) {
             quickFilters.push('ModelType');
         }
 
-        return _.filter(quickFilters, function(quickFilter) {
+        return _.filter(quickFilters, function (quickFilter) {
             return model.hasField(quickFilter);
         });
     },
 
-    _getTypesSetting: function() {
+    _getTypesSetting: function () {
         return this.getSetting('types').split(',');
     },
 
-    _getStackingSetting: function() {
+    _getStackingSetting: function () {
         var chartType = this.getSetting('chartType');
         return chartType !== 'piechart' ? this.getSetting('stackField') : null;
     },
 
-    _getChartConfig: function() {
+    _getChartConfig: function () {
         var chartType = this.getSetting('chartType'),
             stackField = this._getStackingSetting(),
             stackValues = this.stackValues,
@@ -285,12 +264,12 @@ Ext.define('CustomChartApp', {
         return config;
     },
 
-    onTimeboxScopeChange: function() {
+    onTimeboxScopeChange: function () {
         this.callParent(arguments);
         this._addChart();
     },
 
-    _getChartFetch: function() {
+    _getChartFetch: function () {
         var field = this.getSetting('aggregationField'),
             aggregationType = this.getSetting('aggregationType'),
             stackField = this._getStackingSetting(),
@@ -313,7 +292,7 @@ Ext.define('CustomChartApp', {
         return fetch;
     },
 
-    _getChartSort: function() {
+    _getChartSort: function () {
         var model = this.models[0],
             field = model.getField(this.getSetting('aggregationField')),
             sorters = [];
@@ -328,7 +307,7 @@ Ext.define('CustomChartApp', {
         return sorters;
     },
 
-    _getFilters: function() {
+    _getFilters: function () {
         var queries = [],
             timeboxScope = this.getContext().getTimeboxScope();
         if (this.getSetting('query')) {
@@ -338,10 +317,8 @@ Ext.define('CustomChartApp', {
         if (timeboxScope && _.any(this.models, timeboxScope.isApplicable, timeboxScope)) {
             queries.push(timeboxScope.getQueryFilter());
         }
-        var ancestorFilter = this.ancestorFilterPlugin.getFilterForType(this.models[0].typePath);
-        if (ancestorFilter) {
-            queries.push(ancestorFilter);
-        }
+        queries = queries.concat(this.ancestorFilterPlugin.getAllFiltersForType(this.models[0].typePath));
+
         return queries;
     }
 });
