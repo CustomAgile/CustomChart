@@ -3,11 +3,11 @@
 <head>
     <title>CustomChart-1.4.0</title>
     <!--  (c) 2019 Custom Agile.  All Rights Reserved. -->
-    <!--  Build Date: Thu Aug 08 2019 13:21:44 GMT-0500 (Central Daylight Time) -->
+    <!--  Build Date: Fri Aug 09 2019 09:43:52 GMT-0500 (Central Daylight Time) -->
 
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Aug 08 2019 13:21:44 GMT-0500 (Central Daylight Time)";
-        var CHECKSUM = 144511752236;
+        var APP_BUILD_DATE = "Fri Aug 09 2019 09:43:52 GMT-0500 (Central Daylight Time)";
+        var CHECKSUM = 144827505181;
     </script>
 
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -1025,9 +1025,9 @@ Ext.define('Utils.AncestorPiAppFilter', {
                         this.showFiltersBtn = this.btnRenderArea.add(
                             {
                                 xtype: 'rallybutton',
-                                cls: 'secondary rly-small',
+                                cls: this.filtersHidden ? 'secondary' : 'primary' + ' rly-small',
                                 iconCls: 'icon-filter',
-                                toolTipText: 'Show Filters',
+                                toolTipText: + this.filtersHidden ? 'Show' : 'Hide' + ' Filters',
                                 handler: this._toggleFilters,
                                 scope: this
                             }
