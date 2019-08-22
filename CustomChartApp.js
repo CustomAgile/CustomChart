@@ -25,6 +25,7 @@ Ext.define('CustomChartApp', {
         }
     }, {
         id: 'grid-area',
+        itemId: 'grid-area',
         xtype: 'container',
         flex: 1,
         type: 'vbox',
@@ -57,14 +58,10 @@ Ext.define('CustomChartApp', {
                 listeners: {
                     scope: this,
                     ready: function (plugin) {
-                        Rally.data.util.PortfolioItemHelper.getPortfolioItemTypes().then({
-                            scope: this,
-                            success: function (portfolioItemTypes) {
-                                this.portfolioItemTypes = portfolioItemTypes;
-                                return Rally.data.wsapi.ModelFactory.getModels({
-                                    types: this._getTypesSetting()
-                                });
-                            }
+                        this.portfolioItemTypes = plugin.getPortfolioItemTypes();
+                        Rally.data.wsapi.ModelFactory.getModels({
+                            types: this._getTypesSetting(),
+                            scope: this
                         }).then({
                             success: this._onModelsLoaded,
                             scope: this
@@ -78,7 +75,7 @@ Ext.define('CustomChartApp', {
                                 });
                                 this._addChart();
                             }
-                        })
+                        });
                     },
                 }
             });
@@ -92,7 +89,7 @@ Ext.define('CustomChartApp', {
         var gridArea = this.down('#grid-area');
         var gridboard = this.down('rallygridboard');
         if (gridArea && gridboard) {
-            gridboard.setHeight(gridArea.getHeight())
+            gridboard.setHeight(gridArea.getHeight());
         }
     },
 
@@ -139,7 +136,7 @@ Ext.define('CustomChartApp', {
         return result;
     },
 
-    _addChart: function () {
+    _addChart: async function () {
         // If there is a current chart store, force it to stop loading pages
         // Note that recreating the grid will then create a new chart store with
         // the same store ID.
@@ -149,6 +146,7 @@ Ext.define('CustomChartApp', {
         }
 
         var gridArea = this.down('#grid-area');
+        gridArea.setLoading(true);
         gridArea.removeAll();
 
         var context = this.getContext();
@@ -156,8 +154,8 @@ Ext.define('CustomChartApp', {
         if (this.searchAllProjects()) {
             dataContext.project = null;
         }
-        var whiteListFields = ['Milestones', 'Tags'],
-            modelNames = _.pluck(this.models, 'typePath'),
+        var filters = await this._getFilters();
+        var modelNames = _.pluck(this.models, 'typePath'),
             gridBoardConfig = {
                 xtype: 'rallygridboard',
                 toggleState: 'chart',
@@ -184,8 +182,14 @@ Ext.define('CustomChartApp', {
                 context: context,
                 modelNames: modelNames,
                 storeConfig: {
-                    filters: this._getFilters(),
+                    filters: filters,
                     context: dataContext
+                },
+                listeners: {
+                    scope: this,
+                    afterrender: function () {
+                        this.down('#grid-area').setLoading(false);
+                    }
                 }
             };
 
@@ -238,7 +242,7 @@ Ext.define('CustomChartApp', {
                     context: this.getContext().getDataContext(),
                     //TODO: can we do summary fetch here and not limit infinity?
                     //we'll have to also make sure the fetch is correct for export somehow...
-                    limit: Infinity,
+                    limit: 10000,
                     fetch: this._getChartFetch(),
                     sorters: this._getChartSort(),
                     pageSize: 2000,
@@ -307,7 +311,7 @@ Ext.define('CustomChartApp', {
         return sorters;
     },
 
-    _getFilters: function () {
+    _getFilters: async function () {
         var queries = [],
             timeboxScope = this.getContext().getTimeboxScope();
         if (this.getSetting('query')) {
@@ -317,7 +321,8 @@ Ext.define('CustomChartApp', {
         if (timeboxScope && _.any(this.models, timeboxScope.isApplicable, timeboxScope)) {
             queries.push(timeboxScope.getQueryFilter());
         }
-        queries = queries.concat(this.ancestorFilterPlugin.getAllFiltersForType(this.models[0].typePath));
+        var filters = await this.ancestorFilterPlugin.getAllFiltersForType(this.models[0].typePath);
+        queries = queries.concat(filters);
 
         return queries;
     }
