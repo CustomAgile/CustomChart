@@ -3,11 +3,11 @@
 <head>
     <title>CustomChart-1.4.1</title>
     <!--  (c) 2019 Custom Agile.  All Rights Reserved. -->
-    <!--  Build Date: Thu Aug 22 2019 08:52:11 GMT-0600 (Mountain Daylight Time) -->
+    <!--  Build Date: Thu Aug 22 2019 16:08:06 GMT-0600 (Mountain Daylight Time) -->
 
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Aug 22 2019 08:52:11 GMT-0600 (Mountain Daylight Time)";
-        var CHECKSUM = 158825200461;
+        var APP_BUILD_DATE = "Thu Aug 22 2019 16:08:06 GMT-0600 (Mountain Daylight Time)";
+        var CHECKSUM = 159403262112;
     </script>
 
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -390,7 +390,6 @@ Ext.define('Utils.AncestorPiAppFilter', {
 
                         if (hasCustomFieldFilters) {
                             let parentIDs = await new Promise(function (resolve) { this._getFilteredIds(currentLevelFiltersWithoutParent, key, resolve); }.bind(this));
-                            console.log('parentids', parentIDs, ',' + _.map(parentIDs, function (id) { return id.get('ObjectID'); }).join(','));
                             if (parentIDs.length) {
                                 filters.push(new Rally.data.wsapi.Filter({
                                     property: property + '.ObjectID',
@@ -504,7 +503,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
     // Returns an array of records fitting the given filters
     _getFilteredIds: function (filters, model, resolve) {
         let dataContext = Rally.getApp().getContext().getDataContext();
-        if (this._ignoreProjectScope()) {
+        if (this.getIgnoreProjectScope()) {
             dataContext.project = null;
         }
 
@@ -606,6 +605,15 @@ Ext.define('Utils.AncestorPiAppFilter', {
 
     _setReady: function () {
         this.ready = true;
+
+        if (this._isSubscriber() && this.tabPanel) {
+            this.tabPanel.hide();
+        }
+
+        if (this._isSubscriber() && this.showFiltersBtn) {
+            this.showFiltersBtn.hide();
+        }
+
         this.fireEvent('ready', this);
     },
 
@@ -1033,6 +1041,10 @@ Ext.define('Utils.AncestorPiAppFilter', {
     },
 
     _ignoreProjectScope: function () {
+        if (this._isSubscriber()) {
+            return this.publishedValue.ignoreProjectScope;
+        }
+
         var result = false;
         if (this._showIgnoreProjectScopeControl()) {
             // If the control is shown, that values overrides the ignoreScope app setting
