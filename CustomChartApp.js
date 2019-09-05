@@ -321,7 +321,7 @@ Ext.define('CustomChartApp', {
         if (timeboxScope && _.any(this.models, timeboxScope.isApplicable, timeboxScope)) {
             queries.push(timeboxScope.getQueryFilter());
         }
-        var filters = await this.ancestorFilterPlugin.getAllFiltersForType(this.models[0].typePath);
+        var filters = await this.ancestorFilterPlugin.getAllFiltersForType(this.models[0].typePath, true);
         queries = queries.concat(filters);
 
         return queries;
