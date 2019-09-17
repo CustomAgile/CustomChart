@@ -44,6 +44,8 @@ Ext.define('CustomChartApp', {
     },
 
     launch: function () {
+        Rally.data.wsapi.Proxy.superclass.timeout = 120000;
+
         if (!this.getSetting('types')) {
             this.fireEvent('appsettingsneeded'); //todo: does this work?
         }
@@ -147,8 +149,8 @@ Ext.define('CustomChartApp', {
         }
 
         var gridArea = this.down('#grid-area');
-        gridArea.setLoading(true);
         gridArea.removeAll();
+        gridArea.setLoading(true);
 
         var context = this.getContext();
         var dataContext = context.getDataContext();
@@ -156,6 +158,7 @@ Ext.define('CustomChartApp', {
             dataContext.project = null;
         }
         var filters = await this._getFilters();
+
         if (this.loadingFailed) {
             gridArea.setLoading(false);
             return;
@@ -329,10 +332,10 @@ Ext.define('CustomChartApp', {
         if (timeboxScope && _.any(this.models, timeboxScope.isApplicable, timeboxScope)) {
             queries.push(timeboxScope.getQueryFilter());
         }
+
         var filters = await this.ancestorFilterPlugin.getAllFiltersForType(this.models[0].typePath, true).catch((e) => {
-            this._showErrorNotification(e.message || e);
+            Rally.ui.notify.Notifier.showError({ message: (e.message || e) });
             this.loadingFailed = true;
-            this.setLoading(false);
         });
 
         if (filters) {
