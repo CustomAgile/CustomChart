@@ -137,6 +137,7 @@ Ext.define('CustomChartApp', {
     },
 
     _addChart: async function () {
+        this.loadingFailed = false;
         // If there is a current chart store, force it to stop loading pages
         // Note that recreating the grid will then create a new chart store with
         // the same store ID.
@@ -155,6 +156,11 @@ Ext.define('CustomChartApp', {
             dataContext.project = null;
         }
         var filters = await this._getFilters();
+        if (this.loadingFailed) {
+            gridArea.setLoading(false);
+            return;
+        }
+
         var modelNames = _.pluck(this.models, 'typePath'),
             gridBoardConfig = {
                 xtype: 'rallygridboard',
@@ -183,7 +189,8 @@ Ext.define('CustomChartApp', {
                 modelNames: modelNames,
                 storeConfig: {
                     filters: filters,
-                    context: dataContext
+                    context: dataContext,
+                    enablePostGet: true
                 },
                 listeners: {
                     scope: this,
@@ -246,6 +253,7 @@ Ext.define('CustomChartApp', {
                     fetch: this._getChartFetch(),
                     sorters: this._getChartSort(),
                     pageSize: 2000,
+                    enablePostGet: true
                 },
                 calculatorConfig: {
                     calculationType: this.getSetting('aggregationType'),
@@ -321,8 +329,15 @@ Ext.define('CustomChartApp', {
         if (timeboxScope && _.any(this.models, timeboxScope.isApplicable, timeboxScope)) {
             queries.push(timeboxScope.getQueryFilter());
         }
-        var filters = await this.ancestorFilterPlugin.getAllFiltersForType(this.models[0].typePath, true);
-        queries = queries.concat(filters);
+        var filters = await this.ancestorFilterPlugin.getAllFiltersForType(this.models[0].typePath, true).catch((e) => {
+            this._showErrorNotification(e.message || e);
+            this.loadingFailed = true;
+            this.setLoading(false);
+        });
+
+        if (filters) {
+            queries = queries.concat(filters);
+        }
 
         return queries;
     }
