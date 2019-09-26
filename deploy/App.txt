@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CustomChart-1.4.3</title>
+    <title>CustomChart-1.4.4</title>
     <!--  (c) 2019 Custom Agile.  All Rights Reserved. -->
-    <!--  Build Date: Tue Sep 17 2019 14:41:45 GMT-0700 (Pacific Daylight Time) -->
+    <!--  Build Date: Thu Sep 26 2019 15:20:28 GMT-0700 (Pacific Daylight Time) -->
 
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Sep 17 2019 14:41:45 GMT-0700 (Pacific Daylight Time)";
-        var CHECKSUM = 190515751911;
+        var APP_BUILD_DATE = "Thu Sep 26 2019 15:20:28 GMT-0700 (Pacific Daylight Time)";
+        var CHECKSUM = 193006893856;
     </script>
 
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -199,7 +199,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
          * @cfg {Array}
          * Field list for multi-level filter panel
          */
-        defaultFilterFields: ['ArtifactSearch', 'Owner'],
+        defaultFilterFields: ['Owner'],
 
         /**
          * @cfg {Boolean}
@@ -263,7 +263,10 @@ Ext.define('Utils.AncestorPiAppFilter', {
             // We don't want chevrons in the tab panel
             _alignChevron: function () {
                 if (this.chevron) { this.chevron.hide(); }
-            }
+            },
+
+            // Don't create the close buttons
+            _createCloseButton: function () { }
         });
 
         // Add the control components then fire ready
@@ -1346,6 +1349,25 @@ Ext.define('Utils.AncestorPiAppFilter', {
                                 });
 
                                 this.filterControls = [];
+                                let clearAdvancedButtonConfig = {};
+                                let matchTypeConfig = {};
+                                let advancedFilterRowsFlex = 1;
+                                let propertyFieldConfig = {
+                                    blackListFields: this.blackListFields,
+                                    whiteListFields: this.whiteListFields
+                                };
+
+                                if (this.cmp.getWidth() < this.singleRowMinWidth) {
+                                    clearAdvancedButtonConfig = {
+                                        text: 'Clear'
+                                    };
+                                    matchTypeConfig = {
+                                        fieldLabel: 'Match',
+                                        width: 65
+                                    };
+                                    propertyFieldConfig.width = 100;
+                                    advancedFilterRowsFlex = 2;
+                                }
 
                                 _.each(models, function (model, key) {
                                     promises.push(new Promise(function (newResolve) {
@@ -1382,12 +1404,12 @@ Ext.define('Utils.AncestorPiAppFilter', {
                                                     advancedFilterPanelConfig: {
                                                         collapsed: this.advancedFilterCollapsed,
                                                         advancedFilterRowsConfig: {
-                                                            propertyFieldConfig: {
-                                                                blackListFields: this.blackListFields,
-                                                                whiteListFields: this.whiteListFields
-                                                            }
-                                                        }
-                                                    },
+                                                            propertyFieldConfig,
+                                                            flex: advancedFilterRowsFlex
+                                                        },
+                                                        matchTypeConfig,
+                                                        clearAdvancedButtonConfig
+                                                    }
                                                 },
                                                 listeners: {
                                                     inlinefilterchange: this._onFilterChange,
