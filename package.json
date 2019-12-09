@@ -1,6 +1,6 @@
 {
   "name": "CustomChart",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "scripts": {
     "debug": "grunt debug",
     "debug:watch": "nodemon --exec grunt debug",
@@ -21,7 +21,7 @@
     "grunt-contrib-watch": "1.0.0",
     "grunt-prompt": "^1.3.3",
     "grunt-templater": "git://github.com/rockwood/grunt-templater.git",
-    "nodemon": "^1.19.2",
+    "nodemon": "^1.19.4",
     "rally-sdk2-test-utils": "0.1.3",
     "request": "2.67",
     "underscore": "1.8.3",
