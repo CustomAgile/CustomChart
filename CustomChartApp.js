@@ -55,7 +55,7 @@ Ext.define('CustomChartApp', {
                 pluginId: 'ancestorFilterPlugin',
                 settingsConfig: {},
                 filtersHidden: false,
-                whiteListFields: ['Milestones', 'Tags'],
+                whiteListFields: ['Milestones', 'Tags', 'c_EnterpriseApprovalEA'],
                 filterChildren: true,
                 listeners: {
                     scope: this,
