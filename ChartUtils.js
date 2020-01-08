@@ -1,7 +1,7 @@
 Ext.define('ChartUtils', {
     singleton: true,
 
-    getFieldForAggregationType: function(aggregationType) {
+    getFieldForAggregationType: function (aggregationType) {
         switch (aggregationType) {
             case 'acceptedleafcount':
                 return 'AcceptedLeafStoryCount';
@@ -19,8 +19,6 @@ Ext.define('ChartUtils', {
                 return 'Estimate';
             case 'taskactuals':
                 return 'Actuals';
-            case 'percentdonebystorycount':
-                return 'PercentDoneByStoryCount';
             default:
                 return 'PlanEstimate';
         }
