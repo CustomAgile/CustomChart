@@ -19,6 +19,8 @@ Ext.define('ChartUtils', {
                 return 'Estimate';
             case 'taskactuals':
                 return 'Actuals';
+            case 'percentdonebystorycount':
+                return 'PercentDoneByStoryCount';
             default:
                 return 'PlanEstimate';
         }

@@ -256,7 +256,9 @@ Ext.define('CustomChartApp', {
                     fetch: this._getChartFetch(),
                     sorters: this._getChartSort(),
                     pageSize: 2000,
-                    enablePostGet: true
+                    enablePostGet: true,
+                    useShallowFetch: false, 
+                    compact: false
                 },
                 calculatorConfig: {
                     calculationType: this.getSetting('aggregationType'),

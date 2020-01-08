@@ -187,7 +187,8 @@ Ext.define('Settings', {
                         { name: 'Preliminary Estimate Total', value: 'prelimest' },
                         { name: 'Refined Estimate Total', value: 'refinedest' },
                         { name: 'Actuals Total', value: 'taskactuals' },
-                        { name: 'Estimate Total', value: 'taskest' }
+                        { name: 'Estimate Total', value: 'taskest' },
+                        { name: 'PercentDoneByStoryCount', value: 'percentdonebystorycount' }
                     ]
                 },
                 lastQuery: '',

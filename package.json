@@ -1,6 +1,6 @@
 {
   "name": "CustomChart",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "scripts": {
     "debug": "grunt debug",
     "debug:watch": "nodemon --exec grunt debug",
