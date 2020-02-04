@@ -8,30 +8,33 @@ Ext.define('Calculator', {
         bucketBy: undefined
     },
 
-    constructor: function(config) {
+    constructor: function (config) {
         this.initConfig(config);
     },
 
-    prepareChartData: function(store) {
+    prepareChartData: function (store) {
         var data = this._groupData(store),
-        categories = _.keys(data),
-        seriesData;
+            categories = _.keys(data),
+            seriesData;
 
         if (!this.stackField) {
-            if(this.calculationType === 'count') {
-                seriesData = _.map(data, function(value, key) {
+            if (this.calculationType === 'count') {
+                seriesData = _.map(data, function (value, key) {
                     return [key, value.length];
                 });
             } else {
-                seriesData = _.map(data, function(value, key) {
-                    var valueTotal = _.reduce(value, function(total, r) {
+                seriesData = _.map(data, function (value, key) {
+                    var valueTotal = _.reduce(value, function (total, r) {
                         var valueField = this._getValueFieldForCalculationType();
                         return total + r.get(valueField);
                     }, 0, this);
+                    if (value && value.length && (this.calculationType === 'percentdonebystorycount' || this.calculationType === 'percentdonebystoryplanestimate')) {
+                        valueTotal = Math.round(valueTotal / value.length * 100);
+                    }
                     return [key, valueTotal];
                 }, this);
             }
-          
+
             return {
                 categories: categories,
                 series: [
@@ -47,46 +50,49 @@ Ext.define('Calculator', {
                 stackValues;
 
             if (this.stackValues) {
-                stackValues = _.map(this.stackValues, function(stackValue) {
+                stackValues = _.map(this.stackValues, function (stackValue) {
                     return this._getDisplayValue(stackField, stackValue);
                 }, this);
             } else {
                 var values = _.invoke(store.getRange(), 'get', this.stackField);
                 if (this.stackField === 'Iteration' || this.stackField === 'Release') {
-                    values = _.sortBy(values, function(timebox) {
+                    values = _.sortBy(values, function (timebox) {
                         var dateValue = timebox && (timebox.StartDate || timebox.ReleaseStartDate || null);
                         return new Date(dateValue);
                     });
                 }
-                stackValues = _.unique(_.map(values, function(value) {
+                stackValues = _.unique(_.map(values, function (value) {
                     return this._getDisplayValue(stackField, value);
                 }, this));
             }
 
             var series = {};
-            _.each(categories, function(category) {
+            _.each(categories, function (category) {
                 var group = data[category];
-                var recordsByStackValue = _.groupBy(group, function(record) {
+                var recordsByStackValue = _.groupBy(group, function (record) {
                     return this._getDisplayValueForField(record, this.stackField);
                 }, this);
-                _.each(stackValues, function(stackValue) {
+                _.each(stackValues, function (stackValue) {
                     series[stackValue] = series[stackValue] || [];
                     var records = recordsByStackValue[stackValue];
-                    if(this.calculationType === 'count') {
+                    if (this.calculationType === 'count') {
                         series[stackValue].push((records && records.length) || 0);
                     } else {
-                        var valueTotal = _.reduce(records, function(total, r) {
+                        var valueTotal = _.reduce(records, function (total, r) {
                             var valueField = this._getValueFieldForCalculationType();
                             return total + r.get(valueField);
                         }, 0, this);
+                        if (records && records.length && (this.calculationType === 'percentdonebystorycount' || this.calculationType === 'percentdonebystoryplanestimate')) {
+                            valueTotal = Math.round(valueTotal / records.length * 100);
+                        }
                         series[stackValue].push(valueTotal);
                     }
                 }, this);
             }, this);
-          
+
             return {
                 categories: categories,
-                series: _.map(stackValues, function(value) {
+                series: _.map(stackValues, function (value) {
                     return {
                         name: value,
                         type: this.seriesType,
@@ -97,19 +103,19 @@ Ext.define('Calculator', {
         }
     },
 
-    _groupData: function(store) {
+    _groupData: function (store) {
         var field = store.model.getField(this.field),
             fieldType = field.getType(),
             groups = {};
         if (fieldType === 'collection') {
-            _.each(store.getRange(), function(record) {
+            _.each(store.getRange(), function (record) {
                 var value = record.get(this.field),
                     values = value._tagsNameArray;
                 if (_.isEmpty(values)) {
                     groups.None = groups.None || [];
                     groups.None.push(record);
                 } else {
-                    _.each(values, function(val) {
+                    _.each(values, function (val) {
                         groups[val.Name] = groups[val.Name] || [];
                         groups[val.Name].push(record);
                     });
@@ -117,20 +123,20 @@ Ext.define('Calculator', {
             }, this);
             return groups;
         } else {
-            groups = _.groupBy(store.getRange(), function(record) {
+            groups = _.groupBy(store.getRange(), function (record) {
                 return this._getDisplayValueForField(record, this.field);
             }, this);
             if (fieldType === 'date') {
-                var dates = _.sortBy(_.compact(_.map(store.getRange(), function(record) { 
-                    return record.get(this.field); 
+                var dates = _.sortBy(_.compact(_.map(store.getRange(), function (record) {
+                    return record.get(this.field);
                 }, this)));
-                var datesNoGaps = this._getDateRange(dates[0], dates[dates.length-1]);
+                var datesNoGaps = this._getDateRange(dates[0], dates[dates.length - 1]);
                 var allGroups = {};
                 if (groups['-- No Entry --']) {
                     allGroups['-- No Entry --'] = groups['-- No Entry --'];
                 }
-                groups = _.reduce(datesNoGaps, function(accum, val) {
-                    var group = this._getDisplayValue(field, moment(val).toDate()); 
+                groups = _.reduce(datesNoGaps, function (accum, val) {
+                    var group = this._getDisplayValue(field, moment(val).toDate());
                     accum[group] = groups[group] || [];
                     return accum;
                 }, allGroups, this);
@@ -140,21 +146,21 @@ Ext.define('Calculator', {
         }
     },
 
-    _getDateRange: function(startDate, endDate) {
+    _getDateRange: function (startDate, endDate) {
         var currentDate = startDate;
         var datesNoGaps = [];
         var unit = 'd';
         if (this.bucketBy === 'week') {
             unit = 'w';
-        } else if(this.bucketBy === 'month') {
+        } else if (this.bucketBy === 'month') {
             unit = 'M';
-        } else if(this.bucketBy === 'quarter') {
+        } else if (this.bucketBy === 'quarter') {
             unit = 'Q';
-        } else if(this.bucketBy === 'year') {
+        } else if (this.bucketBy === 'year') {
             unit = 'y';
         }
 
-        while(currentDate <= endDate) {
+        while (currentDate <= endDate) {
             datesNoGaps.push(currentDate);
             currentDate = moment(currentDate).add(1, unit).toDate();
         }
@@ -163,14 +169,14 @@ Ext.define('Calculator', {
         return datesNoGaps;
     },
 
-    _getDisplayValueForField: function(record, fieldName) {
+    _getDisplayValueForField: function (record, fieldName) {
         var field = record.getField(fieldName),
             value = record.get(fieldName);
-        
+
         return this._getDisplayValue(field, value);
     },
 
-    _getDisplayValue: function(field, value) {
+    _getDisplayValue: function (field, value) {
         if (_.isDate(value)) {
             if (!this.bucketBy || this.bucketBy === 'day') {
                 return Rally.util.DateTime.formatWithDefault(value);
@@ -199,7 +205,7 @@ Ext.define('Calculator', {
         }
     },
 
-    _getValueFieldForCalculationType: function() {
+    _getValueFieldForCalculationType: function () {
         return ChartUtils.getFieldForAggregationType(this.calculationType);
     }
 });

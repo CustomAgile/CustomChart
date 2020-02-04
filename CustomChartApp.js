@@ -28,8 +28,9 @@ Ext.define('CustomChartApp', {
         itemId: 'grid-area',
         xtype: 'container',
         flex: 1,
+        overflowY: 'auto',
         type: 'vbox',
-        align: 'stretch'
+        align: 'stretch',
     }],
     config: {
         defaultSettings: {
@@ -44,7 +45,7 @@ Ext.define('CustomChartApp', {
     },
 
     launch: function () {
-        Rally.data.wsapi.Proxy.superclass.timeout = 120000;
+        Rally.data.wsapi.Proxy.superclass.timeout = 240000;
 
         if (!this.getSetting('types')) {
             this.fireEvent('appsettingsneeded'); //todo: does this work?
@@ -56,7 +57,7 @@ Ext.define('CustomChartApp', {
                 settingsConfig: {},
                 filtersHidden: false,
                 whiteListFields: ['Milestones', 'Tags', 'c_EnterpriseApprovalEA'],
-                filterChildren: true,
+                visibleTab: this.getSetting('types'),
                 listeners: {
                     scope: this,
                     ready: function (plugin) {
@@ -139,14 +140,10 @@ Ext.define('CustomChartApp', {
     },
 
     _addChart: async function () {
-        this.loadingFailed = false;
-        // If there is a current chart store, force it to stop loading pages
-        // Note that recreating the grid will then create a new chart store with
-        // the same store ID.
-        var chartStore = Ext.getStore('chartStore');
-        if (chartStore) {
-            chartStore.cancelLoad();
-        }
+        // This object helps us cancel a load that is waiting for filters to be returned
+        let thisStatus = { loadingFailed: false, cancelLoad: false };
+
+        this._cancelPreviousLoad(thisStatus);
 
         var gridArea = this.down('#grid-area');
         gridArea.removeAll();
@@ -157,53 +154,67 @@ Ext.define('CustomChartApp', {
         if (this.searchAllProjects()) {
             dataContext.project = null;
         }
-        var filters = await this._getFilters();
+        this._getFilters(thisStatus).then((filters) => {
 
-        if (this.loadingFailed) {
-            gridArea.setLoading(false);
-            return;
-        }
+            if (thisStatus.loadingFailed) {
+                gridArea.setLoading(false);
+                return;
+            }
 
-        var modelNames = _.pluck(this.models, 'typePath'),
-            gridBoardConfig = {
-                xtype: 'rallygridboard',
-                toggleState: 'chart',
-                height: gridArea.getHeight(),
-                chartConfig: this._getChartConfig(),
-                plugins: [{
-                    ptype: 'rallygridboardactionsmenu',
-                    menuItems: [{
-                        text: 'Export to CSV...',
-                        handler: function () {
-                            window.location = Rally.ui.gridboard.Export.buildCsvExportUrl(this.down('rallygridboard').getGridOrBoard());
-                        },
-                        scope: this
-                    }],
-                    buttonConfig: {
-                        iconCls: 'icon-export',
-                        toolTipConfig: {
-                            html: 'Export',
-                            anchor: 'top',
-                            hideDelay: 0
+            if (thisStatus.cancelLoad) {
+                return;
+            }
+
+            var modelNames = _.pluck(this.models, 'typePath'),
+                gridBoardConfig = {
+                    xtype: 'rallygridboard',
+                    toggleState: 'chart',
+                    height: gridArea.getHeight(),
+                    chartConfig: this._getChartConfig(),
+                    plugins: [{
+                        ptype: 'rallygridboardactionsmenu',
+                        menuItems: [{
+                            text: 'Export to CSV...',
+                            handler: function () {
+                                window.location = Rally.ui.gridboard.Export.buildCsvExportUrl(this.down('rallygridboard').getGridOrBoard());
+                            },
+                            scope: this
+                        }],
+                        buttonConfig: {
+                            iconCls: 'icon-export',
+                            toolTipConfig: {
+                                html: 'Export',
+                                anchor: 'top',
+                                hideDelay: 0
+                            }
                         }
+                    }],
+                    context: context,
+                    modelNames: modelNames,
+                    storeConfig: {
+                        filters: filters,
+                        context: dataContext,
+                        enablePostGet: true
                     }
-                }],
-                context: context,
-                modelNames: modelNames,
-                storeConfig: {
-                    filters: filters,
-                    context: dataContext,
-                    enablePostGet: true
-                },
-                listeners: {
-                    scope: this,
-                    afterrender: function () {
-                        this.down('#grid-area').setLoading(false);
-                    }
-                }
-            };
+                };
 
-        this.gridboard = gridArea.add(gridBoardConfig);
+            this.gridboard = gridArea.add(gridBoardConfig);
+        });
+    },
+
+    _cancelPreviousLoad: function (newStatus) {
+        if (this.globalStatus) {
+            this.globalStatus.cancelLoad = true;
+        }
+        this.globalStatus = newStatus;
+
+        // If there is a current chart store, force it to stop loading pages
+        // Note that recreating the grid will then create a new chart store with
+        // the same store ID.
+        var chartStore = Ext.getStore('chartStore');
+        if (chartStore) {
+            chartStore.cancelLoad();
+        }
     },
 
     _getQuickFilters: function () {
@@ -256,7 +267,15 @@ Ext.define('CustomChartApp', {
                     fetch: this._getChartFetch(),
                     sorters: this._getChartSort(),
                     pageSize: 2000,
-                    enablePostGet: true
+                    enablePostGet: true,
+                    listeners: {
+                        scope: this,
+                        load: function (store, records, successful) {
+                            if (!successful) {
+                                Rally.ui.notify.Notifier.showError({ message: 'Failed to load data, most likely caused by a server timeout. Try adjusting your scope or filters to reduce the amount of data returned.' });
+                            }
+                        }
+                    }
                 },
                 calculatorConfig: {
                     calculationType: this.getSetting('aggregationType'),
@@ -264,6 +283,12 @@ Ext.define('CustomChartApp', {
                     stackField: stackField,
                     stackValues: stackValues,
                     bucketBy: chartType === 'piechart' ? null : this.getSetting('bucketBy')
+                },
+                listeners: {
+                    scope: this,
+                    storesLoaded: function () {
+                        this.down('#grid-area').setLoading(false);
+                    }
                 }
             };
 
@@ -322,7 +347,7 @@ Ext.define('CustomChartApp', {
         return sorters;
     },
 
-    _getFilters: async function () {
+    _getFilters: async function (status) {
         var queries = [],
             timeboxScope = this.getContext().getTimeboxScope();
         if (this.getSetting('query')) {
@@ -335,7 +360,7 @@ Ext.define('CustomChartApp', {
 
         var filters = await this.ancestorFilterPlugin.getAllFiltersForType(this.models[0].typePath, true).catch((e) => {
             Rally.ui.notify.Notifier.showError({ message: (e.message || e) });
-            this.loadingFailed = true;
+            status.loadingFailed = true;
         });
 
         if (filters) {

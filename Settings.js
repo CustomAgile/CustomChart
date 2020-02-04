@@ -125,6 +125,59 @@ Ext.define('Settings', {
             }
         },
         {
+            name: 'stackField',
+            xtype: 'rallyfieldcombobox',
+            plugins: ['rallyfieldvalidationui'],
+            fieldLabel: 'Stack By',
+            readyEvent: 'ready',
+            allowBlank: false,
+            allowNoEntry: true,
+            noEntryText: '-- No Stacking --',
+            validateOnChange: false,
+            validateOnBlur: false,
+            width: 300,
+            hidden: true,
+            toggleVisibility: function (chartType) {
+                if (chartType === 'piechart') {
+                    this.hide();
+                    this.select(this.store.getRange()[0]);
+                }
+                else {
+                    this.show();
+                }
+            },
+            handlesEvents: {
+                chartselected: function (chartType) {
+                    this.toggleVisibility(chartType);
+                },
+                typeselected: function (models, context) {
+                    var type = Ext.Array.from(models)[0];
+                    if (type) {
+                        this.refreshWithNewModelType(type, context); //todo: how to handle multiple models
+                    }
+                }
+            },
+            listeners: {
+                ready: function (combo) {
+                    combo.store.filterBy(function (record) {
+                        var field = record.get('fieldDefinition'),
+                            attr = field.attributeDefinition;
+
+                        return record.get(combo.getValueField()) === combo.noEntryValue ||
+                            (attr && !attr.Hidden && field.hasAllowedValues() && !_.contains(['collection'], field.getType()));
+                    });
+
+                    var fields = Ext.Array.map(combo.store.getRange(), function (record) {
+                        return record.get(combo.getValueField());
+                    });
+
+                    if (!Ext.Array.contains(fields, combo.getValue())) {
+                        combo.setValue(fields[0]);
+                    }
+                }
+            }
+        },
+        {
             name: 'bucketBy',
             xtype: 'rallycombobox',
             plugins: ['rallyfieldvalidationui'],
@@ -187,7 +240,9 @@ Ext.define('Settings', {
                     { name: 'Preliminary Estimate Total', value: 'prelimest' },
                     { name: 'Refined Estimate Total', value: 'refinedest' },
                     { name: 'Actuals Total', value: 'taskactuals' },
-                    { name: 'Estimate Total', value: 'taskest' }
+                    { name: 'Estimate Total', value: 'taskest' },
+                    // { name: 'PercentDoneByStoryCount', value: 'percentdonebystorycount' },
+                    // { name: 'PercentDoneByStoryPlanEstimate', value: 'percentdonebystoryplanestimate' }
                 ]
             },
             lastQuery: '',
@@ -210,59 +265,6 @@ Ext.define('Settings', {
 
                 }
             },
-        },
-        {
-            name: 'stackField',
-            xtype: 'rallyfieldcombobox',
-            plugins: ['rallyfieldvalidationui'],
-            fieldLabel: 'Stack By',
-            readyEvent: 'ready',
-            allowBlank: false,
-            allowNoEntry: true,
-            noEntryText: '-- No Stacking --',
-            validateOnChange: false,
-            validateOnBlur: false,
-            width: 300,
-            hidden: true,
-            toggleVisibility: function (chartType) {
-                if (chartType === 'piechart') {
-                    this.hide();
-                    this.select(this.store.getRange()[0]);
-                }
-                else {
-                    this.show();
-                }
-            },
-            handlesEvents: {
-                chartselected: function (chartType) {
-                    this.toggleVisibility(chartType);
-                },
-                typeselected: function (models, context) {
-                    var type = Ext.Array.from(models)[0];
-                    if (type) {
-                        this.refreshWithNewModelType(type, context); //todo: how to handle multiple models
-                    }
-                }
-            },
-            listeners: {
-                ready: function (combo) {
-                    combo.store.filterBy(function (record) {
-                        var field = record.get('fieldDefinition'),
-                            attr = field.attributeDefinition;
-
-                        return record.get(combo.getValueField()) === combo.noEntryValue ||
-                            (attr && !attr.Hidden && field.hasAllowedValues() && !_.contains(['collection'], field.getType()));
-                    });
-
-                    var fields = Ext.Array.map(combo.store.getRange(), function (record) {
-                        return record.get(combo.getValueField());
-                    });
-
-                    if (!Ext.Array.contains(fields, combo.getValue())) {
-                        combo.setValue(fields[0]);
-                    }
-                }
-            }
         },
         { type: 'query' }
         ];
