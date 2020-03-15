@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CustomChart-1.4.8</title>
+    <title>CustomChart-1.4.9</title>
     <!--  (c) 2019 Custom Agile.  All Rights Reserved. -->
-    <!--  Build Date: Tue Feb 04 2020 13:29:53 GMT+0100 (Central European Standard Time) -->
+    <!--  Build Date: Sun Mar 15 2020 13:39:07 GMT+0100 (Central European Standard Time) -->
 
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Feb 04 2020 13:29:53 GMT+0100 (Central European Standard Time)";
-        var CHECKSUM = 1444023641775;
+        var APP_BUILD_DATE = "Sun Mar 15 2020 13:39:07 GMT+0100 (Central European Standard Time)";
+        var CHECKSUM = 1444866120593;
     </script>
 
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -268,7 +268,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
          * @cfg {Array}
          * Whitelist array for inline filters
          */
-        whiteListFields: ['Tags', 'Milstones'],
+        whiteListFields: ['Tags', 'Milstones', 'c_EAEpic'],
 
         /**
          * @cfg {Array}
@@ -688,7 +688,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
 
                 // If filters on custom fields exist, lets get a list of IDs at that level and use those IDs as our filter
                 // This is to overcome an issue with missing indices in Rally's database causing timeouts
-                if (hasCustomFieldFilters) {
+                if (hasCustomFieldFilters && this.getIgnoreProjectScope()) {
                     let parentIDs = [];
                     try {
                         let currentLevelFilters = this._getWsapiFilter(parentType);
@@ -1926,7 +1926,6 @@ Ext.define('Utils.AncestorPiAppFilter', {
 
     _clearAllFilters: function () {
         this.suspendEvents(false);
-        this.suspendLayouts();
 
         // The quick filters don't properly clear if the filter isn't displayed
         let activeTab = this.tabPanel.getActiveTab();
@@ -1934,7 +1933,10 @@ Ext.define('Utils.AncestorPiAppFilter', {
         _.each(this.filterControls, function (filterControl) {
             try {
                 this.tabPanel.setActiveTab(filterControl.tab);
+                filterControl.inlineFilterButton.suspendEvents(false);
                 filterControl.inlineFilterButton.clearAllFilters();
+                filterControl.inlineFilterButton.saveState();
+                filterControl.inlineFilterButton.resumeEvents();
             }
             catch (e) {
                 console.log(e);
@@ -1942,15 +1944,8 @@ Ext.define('Utils.AncestorPiAppFilter', {
         }.bind(this));
 
         this.tabPanel.setActiveTab(activeTab);
-
-        if (this.clearAllButton) {
-            this.clearAllButton.hide();
-        }
-
         this.resumeEvents();
-        this.resumeLayouts(false);
-        this.updateLayout();
-        this.fireEvent('change', this.getMultiLevelFilters());
+        this._onFilterChange();
     },
 
     _hasFilters: function () {
@@ -3103,7 +3098,7 @@ Ext.define('CustomChartApp', {
                 pluginId: 'ancestorFilterPlugin',
                 settingsConfig: {},
                 filtersHidden: false,
-                whiteListFields: ['Milestones', 'Tags', 'c_EnterpriseApprovalEA'],
+                whiteListFields: ['Milestones', 'Tags', 'c_EnterpriseApprovalEA', 'c_EAEpic'],
                 visibleTab: this.getSetting('types'),
                 listeners: {
                     scope: this,
