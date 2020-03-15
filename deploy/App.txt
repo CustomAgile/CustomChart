@@ -3,11 +3,11 @@
 <head>
     <title>CustomChart-1.4.9</title>
     <!--  (c) 2019 Custom Agile.  All Rights Reserved. -->
-    <!--  Build Date: Sun Mar 15 2020 13:39:07 GMT+0100 (Central European Standard Time) -->
-
+    <!--  Build Date: Sun Mar 15 2020 14:32:10 GMT+0100 (Central European Standard Time) -->
+    <!--  Repository: https://github.com/CustomAgile/CustomChart -->
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun Mar 15 2020 13:39:07 GMT+0100 (Central European Standard Time)";
-        var CHECKSUM = 1444866120593;
+        var APP_BUILD_DATE = "Sun Mar 15 2020 14:32:10 GMT+0100 (Central European Standard Time)";
+        var CHECKSUM = 1445823851967;
     </script>
 
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
