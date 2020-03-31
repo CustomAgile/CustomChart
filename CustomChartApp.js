@@ -56,7 +56,7 @@ Ext.define('CustomChartApp', {
                 pluginId: 'ancestorFilterPlugin',
                 settingsConfig: {},
                 filtersHidden: false,
-                whiteListFields: ['Milestones', 'Tags', 'c_EnterpriseApprovalEA', 'c_EAEpic'],
+                whiteListFields: ['Milestones', 'Tags', 'c_EnterpriseApprovalEA', 'c_EAEpic', 'DisplayColor'],
                 visibleTab: this.getSetting('types'),
                 listeners: {
                     scope: this,
@@ -120,7 +120,8 @@ Ext.define('CustomChartApp', {
         var deferred = Ext.create('Deft.Deferred');
         var result = deferred.promise;
 
-        this.models = _.values(models);
+        this.models = [models[this.getSetting('types')]];// _.values(models);
+        this.featureModel = models['PortfolioItem/Feature'];
         var model = this.models[0],
             stackingSetting = this._getStackingSetting(),
             stackingField = stackingSetting && model.getField(stackingSetting);
@@ -230,7 +231,13 @@ Ext.define('CustomChartApp', {
     },
 
     _getTypesSetting: function () {
-        return this.getSetting('types').split(',');
+        var types = this.getSetting('types').split(',');
+
+        if (this._isFeatureFieldForStoryChart()) {
+            types.push('PortfolioItem/Feature');
+        }
+
+        return types;
     },
 
     _getStackingSetting: function () {
@@ -280,6 +287,8 @@ Ext.define('CustomChartApp', {
                 calculatorConfig: {
                     calculationType: this.getSetting('aggregationType'),
                     field: this.getSetting('aggregationField'),
+                    isFeatureFieldForStoryChart: this._isFeatureFieldForStoryChart(),
+                    featureModel: this.featureModel,
                     stackField: stackField,
                     stackValues: stackValues,
                     bucketBy: chartType === 'piechart' ? null : this.getSetting('bucketBy')
@@ -293,7 +302,7 @@ Ext.define('CustomChartApp', {
             };
 
         if (model.isArtifact()) {
-            config.storeConfig.models = this._getTypesSetting();
+            config.storeConfig.models = [this.getSetting('types')];
             config.storeType = 'Rally.data.wsapi.artifact.Store';
         }
         else {
@@ -312,8 +321,14 @@ Ext.define('CustomChartApp', {
     _getChartFetch: function () {
         var field = this.getSetting('aggregationField'),
             aggregationType = this.getSetting('aggregationType'),
+            artifactType = this.getSetting('types'),
+            level = this.getSetting('aggregationLevel'),
             stackField = this._getStackingSetting(),
             fetch = ['FormattedID', 'Name', field];
+
+        if (artifactType === 'HierarchicalRequirement' && level === 'PortfolioItem/Feature') {
+            fetch.push('Feature');
+        }
 
         if (aggregationType !== 'count') {
             fetch.push(ChartUtils.getFieldForAggregationType(aggregationType));
@@ -368,5 +383,9 @@ Ext.define('CustomChartApp', {
         }
 
         return queries;
+    },
+
+    _isFeatureFieldForStoryChart: function () {
+        return this.getSetting('types') === 'HierarchicalRequirement' && this.getSetting('aggregationLevel') === 'PortfolioItem/Feature';
     }
 });

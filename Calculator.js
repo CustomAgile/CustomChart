@@ -3,6 +3,8 @@ Ext.define('Calculator', {
     config: {
         calculationType: undefined,
         field: undefined,
+        isFeatureFieldForStoryChart: false,
+        featureModel: undefined,
         stackField: undefined,
         stackValues: undefined,
         bucketBy: undefined
@@ -70,7 +72,7 @@ Ext.define('Calculator', {
             _.each(categories, function (category) {
                 var group = data[category];
                 var recordsByStackValue = _.groupBy(group, function (record) {
-                    return this._getDisplayValueForField(record, this.stackField);
+                    return this._getDisplayValueForField(record, this.stackField, false);
                 }, this);
                 _.each(stackValues, function (stackValue) {
                     series[stackValue] = series[stackValue] || [];
@@ -104,13 +106,14 @@ Ext.define('Calculator', {
     },
 
     _groupData: function (store) {
-        var field = store.model.getField(this.field),
-            fieldType = field.getType(),
-            groups = {};
+        var field = this._getField(store);
+        var fieldType = field && field.getType() || '';
+        var groups = {};
+
         if (fieldType === 'collection') {
             _.each(store.getRange(), function (record) {
-                var value = record.get(this.field),
-                    values = value._tagsNameArray;
+                var value = this.isFeatureFieldForStoryChart ? record.get('Feature') && record.get('Feature')[this.field] || {} : record.get(this.field);
+                var values = value._tagsNameArray;
                 if (_.isEmpty(values)) {
                     groups.None = groups.None || [];
                     groups.None.push(record);
@@ -124,11 +127,11 @@ Ext.define('Calculator', {
             return groups;
         } else {
             groups = _.groupBy(store.getRange(), function (record) {
-                return this._getDisplayValueForField(record, this.field);
+                return this._getDisplayValueForField(record, this.field, true);
             }, this);
             if (fieldType === 'date') {
                 var dates = _.sortBy(_.compact(_.map(store.getRange(), function (record) {
-                    return record.get(this.field);
+                    return this.isFeatureFieldForStoryChart ? record.get('Feature') && record.get('Feature')[this.field] && Rally.util.DateTime.fromIsoString(record.get('Feature')[this.field]) : record.get(this.field);
                 }, this)));
                 var datesNoGaps = this._getDateRange(dates[0], dates[dates.length - 1]);
                 var allGroups = {};
@@ -169,15 +172,25 @@ Ext.define('Calculator', {
         return datesNoGaps;
     },
 
-    _getDisplayValueForField: function (record, fieldName) {
-        var field = record.getField(fieldName),
-            value = record.get(fieldName);
+    _getDisplayValueForField: function (record, fieldName, isGrouping) {
+        if (this.isFeatureFieldForStoryChart && isGrouping && !record.get('Feature')) {
+            return 'No Feature';
+        }
+
+        var field = this.isFeatureFieldForStoryChart && isGrouping ? this.featureModel && this.featureModel.getField(fieldName) : record.getField(fieldName),
+            value = this.isFeatureFieldForStoryChart && isGrouping ? record.get('Feature')[fieldName] : record.get(fieldName);
+
+        if (field.getType() === 'date' && value && typeof value === 'string') {
+            value = Rally.util.DateTime.fromIsoString(value);
+        }
 
         return this._getDisplayValue(field, value);
     },
 
     _getDisplayValue: function (field, value) {
-        if (_.isDate(value)) {
+        if (!field) {
+            return 'Field not groupable';
+        } else if (_.isDate(value)) {
             if (!this.bucketBy || this.bucketBy === 'day') {
                 return Rally.util.DateTime.formatWithDefault(value);
             } else if (this.bucketBy === 'week') {
@@ -190,7 +203,7 @@ Ext.define('Calculator', {
                 return moment(value).startOf('year').format('YYYY');
             }
         } else if (_.isObject(value)) {
-            return value._refObjectName;
+            return value._refObjectName || value._ref;
         } else if (Ext.isEmpty(value)) {
             var fieldType = field.getType();
             if (field.attributeDefinition.SchemaType === 'User') {
@@ -202,6 +215,15 @@ Ext.define('Calculator', {
             }
         } else {
             return value;
+        }
+    },
+
+    _getField: function (store) {
+        if (this.isFeatureFieldForStoryChart) {
+            return this.featureModel && this.featureModel.getField(this.field);
+        }
+        else {
+            return store.model.getField(this.field)
         }
     },
 

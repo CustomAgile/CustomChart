@@ -74,6 +74,41 @@ Ext.define('Settings', {
             }
         },
         {
+            name: 'aggregationLevel',
+            xtype: 'rallycombobox',
+            plugins: ['rallyfieldvalidationui'],
+            fieldLabel: 'Aggregation Level',
+            displayField: 'name',
+            valueField: 'value',
+            editable: false,
+            allowBlank: false,
+            store: Ext.create('Ext.data.Store', {
+                fields: ['name', 'value'],
+                data: [
+                    { name: 'User Story', value: 'HierarchicalRequirement' },
+                    { name: 'Feature', value: 'PortfolioItem/Feature' }
+                ]
+            }),
+            listeners: {
+                change: function (combo) {
+                    combo.fireEvent('aggregationLevelChanged', combo.getValue(), combo.context);
+                }
+            },
+            bubbleEvents: ['aggregationLevelChanged'],
+            handlesEvents: {
+                typeselected: function (type, context) {
+                    if (type === 'HierarchicalRequirement') {
+                        this.show();
+                        this.fireEvent('aggregationLevelChanged', this.getValue(), context);
+                    }
+                    else {
+                        this.hide();
+                        this.fireEvent('aggregationLevelChanged', type, context);
+                    }
+                }
+            },
+        },
+        {
             name: 'aggregationField', //todo: don't validate on settings load
             xtype: 'rallyfieldcombobox',
             plugins: ['rallyfieldvalidationui'],
@@ -84,7 +119,7 @@ Ext.define('Settings', {
             validateOnBlur: false,
             width: 300,
             handlesEvents: {
-                typeselected: function (models, context) {
+                aggregationLevelChanged: function (models, context) {
                     var type = Ext.Array.from(models)[0];
                     if (type) {
                         this.refreshWithNewModelType(type, context); //todo: how to handle multiple models
@@ -114,7 +149,7 @@ Ext.define('Settings', {
                         return record.get(combo.getValueField());
                     });
 
-                    if (!Ext.Array.contains(fields, combo.getValue())) {
+                    if (fields.length && !Ext.Array.contains(fields, combo.getValue())) {
                         combo.setValue(fields[0]);
                     }
 

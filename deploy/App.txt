@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CustomChart-1.4.9</title>
+    <title>CustomChart-1.5.0</title>
     <!--  (c) 2019 Custom Agile.  All Rights Reserved. -->
-    <!--  Build Date: Sun Mar 15 2020 14:32:10 GMT+0100 (Central European Standard Time) -->
+    <!--  Build Date: Tue Mar 31 2020 14:19:25 GMT-0400 (Eastern Daylight Time) -->
     <!--  Repository: https://github.com/CustomAgile/CustomChart -->
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun Mar 15 2020 14:32:10 GMT+0100 (Central European Standard Time)";
-        var CHECKSUM = 1445823851967;
+        var APP_BUILD_DATE = "Tue Mar 31 2020 14:19:25 GMT-0400 (Eastern Daylight Time)";
+        var CHECKSUM = 1495197547070;
     </script>
 
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -201,7 +201,7 @@ multiFilterHelpHtml = `
         `;
 Ext.define('Utils.AncestorPiAppFilter', {
     alias: 'plugin.UtilsAncestorPiAppFilter',
-    version: "1.2.3",
+    version: "1.2.6",
     mixins: [
         'Ext.AbstractPlugin',
         'Rally.Messageable'
@@ -268,7 +268,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
          * @cfg {Array}
          * Whitelist array for inline filters
          */
-        whiteListFields: ['Tags', 'Milstones', 'c_EAEpic'],
+        whiteListFields: ['Tags', 'Milstones', 'c_EAEpic', 'DisplayColor'],
 
         /**
          * @cfg {Array}
@@ -561,6 +561,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
                 filters.push(childFilter);
             }
         }
+
         return filters;
     },
 
@@ -754,11 +755,33 @@ Ext.define('Utils.AncestorPiAppFilter', {
             }
         }
 
-        if (filter && parentPrefix) {
-            this._updateWsapiFilterWithPrefix(filter, parentPrefix);
+        if (filter) {
+            this._updateWsapiDisplayColorFilter(filter);
+            if (parentPrefix) {
+                this._updateWsapiFilterWithPrefix(filter, parentPrefix);
+            }
         }
 
         return filter ? [filter] : [];
+    },
+
+    // DisplayColor filter passes hex value as uppercase, but the web service needs
+    // hex values to be lowercase in order to work properly
+    _updateWsapiDisplayColorFilter: function (filter) {
+        if (filter) {
+            if (filter.property) {
+                if (typeof filter.property === 'object') {
+                    this._updateWsapiDisplayColorFilter(filter.property);
+                }
+            }
+
+            if (typeof filter.value === 'object') {
+                this._updateWsapiDisplayColorFilter(filter.value);
+            }
+            else if (typeof filter.value === 'string' && /^#[0-9a-f]{3,6}$/i.test(filter.value)) {
+                filter.value = filter.value.toLowerCase();
+            }
+        }
     },
 
     // Recursively traverse through a Rally WSAPI filter and apply the given prefix to all of the values
@@ -2384,6 +2407,8 @@ Ext.define('Calculator', {
     config: {
         calculationType: undefined,
         field: undefined,
+        isFeatureFieldForStoryChart: false,
+        featureModel: undefined,
         stackField: undefined,
         stackValues: undefined,
         bucketBy: undefined
@@ -2451,7 +2476,7 @@ Ext.define('Calculator', {
             _.each(categories, function (category) {
                 var group = data[category];
                 var recordsByStackValue = _.groupBy(group, function (record) {
-                    return this._getDisplayValueForField(record, this.stackField);
+                    return this._getDisplayValueForField(record, this.stackField, false);
                 }, this);
                 _.each(stackValues, function (stackValue) {
                     series[stackValue] = series[stackValue] || [];
@@ -2485,13 +2510,14 @@ Ext.define('Calculator', {
     },
 
     _groupData: function (store) {
-        var field = store.model.getField(this.field),
-            fieldType = field.getType(),
-            groups = {};
+        var field = this._getField(store);
+        var fieldType = field && field.getType() || '';
+        var groups = {};
+
         if (fieldType === 'collection') {
             _.each(store.getRange(), function (record) {
-                var value = record.get(this.field),
-                    values = value._tagsNameArray;
+                var value = this.isFeatureFieldForStoryChart ? record.get('Feature') && record.get('Feature')[this.field] || {} : record.get(this.field);
+                var values = value._tagsNameArray;
                 if (_.isEmpty(values)) {
                     groups.None = groups.None || [];
                     groups.None.push(record);
@@ -2505,11 +2531,11 @@ Ext.define('Calculator', {
             return groups;
         } else {
             groups = _.groupBy(store.getRange(), function (record) {
-                return this._getDisplayValueForField(record, this.field);
+                return this._getDisplayValueForField(record, this.field, true);
             }, this);
             if (fieldType === 'date') {
                 var dates = _.sortBy(_.compact(_.map(store.getRange(), function (record) {
-                    return record.get(this.field);
+                    return this.isFeatureFieldForStoryChart ? record.get('Feature') && record.get('Feature')[this.field] && Rally.util.DateTime.fromIsoString(record.get('Feature')[this.field]) : record.get(this.field);
                 }, this)));
                 var datesNoGaps = this._getDateRange(dates[0], dates[dates.length - 1]);
                 var allGroups = {};
@@ -2550,15 +2576,25 @@ Ext.define('Calculator', {
         return datesNoGaps;
     },
 
-    _getDisplayValueForField: function (record, fieldName) {
-        var field = record.getField(fieldName),
-            value = record.get(fieldName);
+    _getDisplayValueForField: function (record, fieldName, isGrouping) {
+        if (this.isFeatureFieldForStoryChart && isGrouping && !record.get('Feature')) {
+            return 'No Feature';
+        }
+
+        var field = this.isFeatureFieldForStoryChart && isGrouping ? this.featureModel && this.featureModel.getField(fieldName) : record.getField(fieldName),
+            value = this.isFeatureFieldForStoryChart && isGrouping ? record.get('Feature')[fieldName] : record.get(fieldName);
+
+        if (field.getType() === 'date' && value && typeof value === 'string') {
+            value = Rally.util.DateTime.fromIsoString(value);
+        }
 
         return this._getDisplayValue(field, value);
     },
 
     _getDisplayValue: function (field, value) {
-        if (_.isDate(value)) {
+        if (!field) {
+            return 'Field not groupable';
+        } else if (_.isDate(value)) {
             if (!this.bucketBy || this.bucketBy === 'day') {
                 return Rally.util.DateTime.formatWithDefault(value);
             } else if (this.bucketBy === 'week') {
@@ -2571,7 +2607,7 @@ Ext.define('Calculator', {
                 return moment(value).startOf('year').format('YYYY');
             }
         } else if (_.isObject(value)) {
-            return value._refObjectName;
+            return value._refObjectName || value._ref;
         } else if (Ext.isEmpty(value)) {
             var fieldType = field.getType();
             if (field.attributeDefinition.SchemaType === 'User') {
@@ -2583,6 +2619,15 @@ Ext.define('Calculator', {
             }
         } else {
             return value;
+        }
+    },
+
+    _getField: function (store) {
+        if (this.isFeatureFieldForStoryChart) {
+            return this.featureModel && this.featureModel.getField(this.field);
+        }
+        else {
+            return store.model.getField(this.field)
         }
     },
 
@@ -2843,6 +2888,41 @@ Ext.define('Settings', {
             }
         },
         {
+            name: 'aggregationLevel',
+            xtype: 'rallycombobox',
+            plugins: ['rallyfieldvalidationui'],
+            fieldLabel: 'Aggregation Level',
+            displayField: 'name',
+            valueField: 'value',
+            editable: false,
+            allowBlank: false,
+            store: Ext.create('Ext.data.Store', {
+                fields: ['name', 'value'],
+                data: [
+                    { name: 'User Story', value: 'HierarchicalRequirement' },
+                    { name: 'Feature', value: 'PortfolioItem/Feature' }
+                ]
+            }),
+            listeners: {
+                change: function (combo) {
+                    combo.fireEvent('aggregationLevelChanged', combo.getValue(), combo.context);
+                }
+            },
+            bubbleEvents: ['aggregationLevelChanged'],
+            handlesEvents: {
+                typeselected: function (type, context) {
+                    if (type === 'HierarchicalRequirement') {
+                        this.show();
+                        this.fireEvent('aggregationLevelChanged', this.getValue(), context);
+                    }
+                    else {
+                        this.hide();
+                        this.fireEvent('aggregationLevelChanged', type, context);
+                    }
+                }
+            },
+        },
+        {
             name: 'aggregationField', //todo: don't validate on settings load
             xtype: 'rallyfieldcombobox',
             plugins: ['rallyfieldvalidationui'],
@@ -2853,7 +2933,7 @@ Ext.define('Settings', {
             validateOnBlur: false,
             width: 300,
             handlesEvents: {
-                typeselected: function (models, context) {
+                aggregationLevelChanged: function (models, context) {
                     var type = Ext.Array.from(models)[0];
                     if (type) {
                         this.refreshWithNewModelType(type, context); //todo: how to handle multiple models
@@ -2883,7 +2963,7 @@ Ext.define('Settings', {
                         return record.get(combo.getValueField());
                     });
 
-                    if (!Ext.Array.contains(fields, combo.getValue())) {
+                    if (fields.length && !Ext.Array.contains(fields, combo.getValue())) {
                         combo.setValue(fields[0]);
                     }
 
@@ -3098,7 +3178,7 @@ Ext.define('CustomChartApp', {
                 pluginId: 'ancestorFilterPlugin',
                 settingsConfig: {},
                 filtersHidden: false,
-                whiteListFields: ['Milestones', 'Tags', 'c_EnterpriseApprovalEA', 'c_EAEpic'],
+                whiteListFields: ['Milestones', 'Tags', 'c_EnterpriseApprovalEA', 'c_EAEpic', 'DisplayColor'],
                 visibleTab: this.getSetting('types'),
                 listeners: {
                     scope: this,
@@ -3162,7 +3242,8 @@ Ext.define('CustomChartApp', {
         var deferred = Ext.create('Deft.Deferred');
         var result = deferred.promise;
 
-        this.models = _.values(models);
+        this.models = [models[this.getSetting('types')]];// _.values(models);
+        this.featureModel = models['PortfolioItem/Feature'];
         var model = this.models[0],
             stackingSetting = this._getStackingSetting(),
             stackingField = stackingSetting && model.getField(stackingSetting);
@@ -3272,7 +3353,13 @@ Ext.define('CustomChartApp', {
     },
 
     _getTypesSetting: function () {
-        return this.getSetting('types').split(',');
+        var types = this.getSetting('types').split(',');
+
+        if (this._isFeatureFieldForStoryChart()) {
+            types.push('PortfolioItem/Feature');
+        }
+
+        return types;
     },
 
     _getStackingSetting: function () {
@@ -3322,6 +3409,8 @@ Ext.define('CustomChartApp', {
                 calculatorConfig: {
                     calculationType: this.getSetting('aggregationType'),
                     field: this.getSetting('aggregationField'),
+                    isFeatureFieldForStoryChart: this._isFeatureFieldForStoryChart(),
+                    featureModel: this.featureModel,
                     stackField: stackField,
                     stackValues: stackValues,
                     bucketBy: chartType === 'piechart' ? null : this.getSetting('bucketBy')
@@ -3335,7 +3424,7 @@ Ext.define('CustomChartApp', {
             };
 
         if (model.isArtifact()) {
-            config.storeConfig.models = this._getTypesSetting();
+            config.storeConfig.models = [this.getSetting('types')];
             config.storeType = 'Rally.data.wsapi.artifact.Store';
         }
         else {
@@ -3354,8 +3443,14 @@ Ext.define('CustomChartApp', {
     _getChartFetch: function () {
         var field = this.getSetting('aggregationField'),
             aggregationType = this.getSetting('aggregationType'),
+            artifactType = this.getSetting('types'),
+            level = this.getSetting('aggregationLevel'),
             stackField = this._getStackingSetting(),
             fetch = ['FormattedID', 'Name', field];
+
+        if (artifactType === 'HierarchicalRequirement' && level === 'PortfolioItem/Feature') {
+            fetch.push('Feature');
+        }
 
         if (aggregationType !== 'count') {
             fetch.push(ChartUtils.getFieldForAggregationType(aggregationType));
@@ -3410,6 +3505,10 @@ Ext.define('CustomChartApp', {
         }
 
         return queries;
+    },
+
+    _isFeatureFieldForStoryChart: function () {
+        return this.getSetting('types') === 'HierarchicalRequirement' && this.getSetting('aggregationLevel') === 'PortfolioItem/Feature';
     }
 });
 
