@@ -176,9 +176,7 @@ Ext.define('CustomChartApp', {
                         ptype: 'rallygridboardactionsmenu',
                         menuItems: [{
                             text: 'Export to CSV...',
-                            handler: function () {
-                                window.location = Rally.ui.gridboard.Export.buildCsvExportUrl(this.down('rallygridboard').getGridOrBoard());
-                            },
+                            handler: this._export,
                             scope: this
                         }],
                         buttonConfig: {
@@ -265,6 +263,13 @@ Ext.define('CustomChartApp', {
                     "#DA1884", // $pink,
                     "#C0C0C0" // $grey4
                 ],
+                // chartConfig: {
+                //     legend: {
+                //         floating: true,
+                //         enabled: true,
+                //         labelFormat: '{name} {data}'
+                //     },
+                // },
                 storeConfig: {
                     storeId: 'chartStore',
                     context: this.getContext().getDataContext(),
@@ -383,6 +388,78 @@ Ext.define('CustomChartApp', {
         }
 
         return queries;
+    },
+
+    _export: function () {
+        if (this.gridboard) {
+            let chart = this.gridboard.getGridOrBoard();
+
+            if (chart && typeof chart.loadedStores === 'object') {
+                let csv = [];
+                let row = [];
+                let records = chart.loadedStores.getRange();
+                let isFeatureFieldForStory = this._isFeatureFieldForStoryChart();
+                let model = this.models[0];
+                let field = model.getField(this.getSetting('aggregationField'));
+                if (isFeatureFieldForStory) {
+                    field = this.featureModel.getField(this.getSetting('aggregationField'));
+                }
+                let aggregationType = this.getSetting('aggregationType');
+                if (aggregationType !== 'count') {
+                    aggregationType = ChartUtils.getFieldForAggregationType(aggregationType);
+                }
+                else {
+                    aggregationType = null;
+                }
+                let stackField = this._getStackingSetting();
+
+                row.push('ID');
+                row.push('Name');
+
+                if (isFeatureFieldForStory) {
+                    row.push('Feature');
+                }
+
+                row.push(field.displayName || 'Aggregation Field');
+
+                if (aggregationType) {
+                    row.push(aggregationType);
+                }
+
+                if (stackField) {
+                    row.push(stackField);
+                }
+
+                csv.push(row.join(','));
+
+                for (let r of records) {
+                    row = [];
+                    row.push(r.get('FormattedID'));
+                    row.push(CustomAgile.ui.renderer.RecordFieldRendererFactory.getFieldDisplayValue(r, 'Name', '; ', true));
+
+                    if (isFeatureFieldForStory) {
+                        row.push(CustomAgile.ui.renderer.RecordFieldRendererFactory.getFieldDisplayValue(r, 'Feature', '; ', true));
+                        row.push(CustomAgile.ui.renderer.RecordFieldRendererFactory.getFieldDisplayValue(r.get('Feature'), field.name, '; ', true));
+                    }
+                    else {
+                        row.push(CustomAgile.ui.renderer.RecordFieldRendererFactory.getFieldDisplayValue(r, field.name, '; ', true));
+                    }
+
+                    if (aggregationType) {
+                        row.push(CustomAgile.ui.renderer.RecordFieldRendererFactory.getFieldDisplayValue(r, aggregationType, '; ', true));
+                    }
+
+                    if (stackField) {
+                        row.push(CustomAgile.ui.renderer.RecordFieldRendererFactory.getFieldDisplayValue(r, stackField, '; ', true));
+                    }
+
+                    csv.push(row.join(','));
+                }
+                csv = csv.join('\r\n');
+                let fileName = `custom-chart-export-${Rally.util.DateTime.format(new Date(), 'Y-m-d-h-i-s')}.csv`;
+                CustomAgile.utils.Toolbox.saveAs(csv, fileName);
+            }
+        }
     },
 
     _isFeatureFieldForStoryChart: function () {

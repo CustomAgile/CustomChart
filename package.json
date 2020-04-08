@@ -1,6 +1,6 @@
 {
   "name": "CustomChart",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "scripts": {
     "debug": "grunt debug",
     "debug:watch": "nodemon --exec grunt debug",
@@ -11,7 +11,8 @@
   "dependencies": {
     "@agile-central-technical-services/utils-ancestor-pi-inline-filter": "^1.0.14",
     "@agile-central-technical-services/utils-cancel-store-load": "^1.0.0",
-    "@customagile/ancestor-pi-multi-level-pi-app-filter": "git+https://github.com/CustomAgile/utils-ancestor-pi-app-filter.git"
+    "@customagile/ancestor-pi-multi-level-pi-app-filter": "git+https://github.com/CustomAgile/utils-ancestor-pi-app-filter.git",
+    "@customagile/utils-field-renderer": "git+https://github.com/CustomAgile/utils-field-renderer.git"
   },
   "devDependencies": {
     "grunt": "~0.4.5",
