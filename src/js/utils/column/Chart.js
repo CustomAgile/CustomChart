@@ -32,14 +32,15 @@ Ext.define('ColumnChart', {
                         enabled: false
                     },
                     showInLegend: false,
-                    colorByPoint: true
+                    colorByPoint: true,
+                    animation: false
                 }
             }
         },
         calculatorType: 'ColumnCalculator'
     },
 
-    constructor: function(config) {
+    constructor: function (config) {
         config = config || {};
         this.mergeConfig(config);
 

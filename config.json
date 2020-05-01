@@ -4,26 +4,26 @@
     "sdk": "2.1",
     "repository": "https://github.com/CustomAgile/CustomChart",
     "javascript": [
-        "Overrides.js",
+        "src/js/utils/Overrides.js",
         "node_modules/@agile-central-technical-services/utils-cancel-store-load/index.js",
         "node_modules/@customagile/ancestor-pi-multi-level-pi-app-filter/index.js",
         "node_modules/@customagile/utils-field-renderer/field-renderer.js",
         "node_modules/@agile-central-technical-services/utils-ancestor-pi-inline-filter/index.js",
-        "export-toolbox.js",
-        "Config.js",
-        "ChartUtils.js",
-        "Calculator.js",
-        "bar/Calculator.js",
-        "bar/Chart.js",
-        "column/Calculator.js",
-        "column/Chart.js",
-        "pie/Calculator.js",
-        "pie/Chart.js",
-        "Settings.js",
-        "CustomChartApp.js"
+        "src/js/utils/export-toolbox.js",
+        "src/js/utils/ChartUtils.js",
+        "src/js/utils/Calculator.js",
+        "src/js/utils/bar/Calculator.js",
+        "src/js/utils/bar/Chart.js",
+        "src/js/utils/column/Calculator.js",
+        "src/js/utils/column/Chart.js",
+        "src/js/utils/pie/Calculator.js",
+        "src/js/utils/pie/Chart.js",
+        "src/js/utils/chart-grid-toggle-btn.js",
+        "src/js/utils/Settings.js",
+        "src/js/CustomChartApp.js"
     ],
     "css": [
-        "app.css",
+        "src/css/app.css",
         "node_modules/@customagile/ancestor-pi-multi-level-pi-app-filter/index.css"
     ]
 }

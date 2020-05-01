@@ -213,6 +213,9 @@ Ext.define('Calculator', {
             } else {
                 return '-- No Entry --';
             }
+        } else if (field.name === 'DisplayColor') {
+            let color = CustomAgile.ui.renderer.RecordFieldRendererFactory.colorPalette[value];
+            return color ? color : value;
         } else {
             return value;
         }

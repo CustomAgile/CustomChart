@@ -7,6 +7,7 @@ Ext.define('BarChart', {
 
     config: {
         chartConfig: {
+            isAnimate: false,
             chart: { type: 'bar' },
             title: {
                 text: ''
@@ -32,14 +33,15 @@ Ext.define('BarChart', {
                         enabled: false
                     },
                     showInLegend: true,
-                    colorByPoint: false
+                    colorByPoint: false,
+                    animation: false
                 }
             }
         },
         calculatorType: 'BarCalculator'
     },
 
-    constructor: function(config) {
+    constructor: function (config) {
         config = config || {};
         this.mergeConfig(config);
 

@@ -13,7 +13,7 @@ Ext.define('PieChart', {
                 plotBorderWidth: null,
                 plotShadow: false
             },
-            title: {text: ''},
+            title: { text: '' },
             tooltip: {
                 headerFormat: '',
                 pointFormat: '<b>{point.name}:</b> {point.percentage:.1f}% ({point.y}/{point.total})'
@@ -28,14 +28,15 @@ Ext.define('PieChart', {
                         style: {
                             color: 'black'
                         }
-                    }
+                    },
+                    animation: false
                 }
             }
         },
         calculatorType: 'PieCalculator'
     },
 
-    constructor: function(config) {
+    constructor: function (config) {
         config = config || {};
         this.mergeConfig(config);
         this.callParent([this.config]);

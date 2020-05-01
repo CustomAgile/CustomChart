@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CustomChart-1.5.1</title>
+    <title>CustomChart-1.6.0</title>
     <!--  (c) 2019 Custom Agile.  All Rights Reserved. -->
-    <!--  Build Date: Wed Apr 08 2020 17:09:29 GMT-0400 (Eastern Daylight Time) -->
+    <!--  Build Date: Fri May 01 2020 15:02:08 GMT-0400 (Eastern Daylight Time) -->
     <!--  Repository: https://github.com/CustomAgile/CustomChart -->
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Apr 08 2020 17:09:29 GMT-0400 (Eastern Daylight Time)";
-        var CHECKSUM = 1591542364874;
+        var APP_BUILD_DATE = "Fri May 01 2020 15:02:08 GMT-0400 (Eastern Daylight Time)";
+        var CHECKSUM = 1769426805140;
     </script>
 
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -31,28 +31,34 @@ Ext.override(Rally.ui.gridboard.Export, {
     }
 });
 
-// Ext.override(Rally.ui.combobox.FieldComboBox, {
-//     _populateStore: function () {
-//         if (!this.store) {
-//             return;
-//         }
-//         var data = _.sortBy(
-//             _.map(
-//                 _.filter(this.model.getFields(), this._isNotHidden),
-//                 this._convertFieldToLabelValuePair,
-//                 this
-//             ),
-//             'name'
-//         );
-
-//         console.log(data);
-
-//         this.store.loadRawData(data);
-//         this._onStoreLoad();
-//         this.setDefaultValue();
-//         this.onReady();
+// Ext.override(Rally.ui.gridboard.GridBoard, {
+//     fireEvent: function () {
+//         console.log(arguments);
+//         this.callParent(arguments);
 //     }
 // });
+Ext.override(Rally.ui.combobox.FieldComboBox, {
+    _populateStore: function () {
+        if (!this.store) {
+            return;
+        }
+        var data = _.sortBy(
+            _.map(
+                _.filter(this.model.getFields(), this._isNotHidden),
+                this._convertFieldToLabelValuePair,
+                this
+            ),
+            'name'
+        );
+
+        console.log(data);
+
+        this.store.loadRawData(data);
+        this._onStoreLoad();
+        this.setDefaultValue();
+        this.onReady();
+    }
+});
 /**
  * Overrides to allow a store load to the canceled which will abort loading
  * any subsequent pages and not invoke the load callback.
@@ -93,7 +99,7 @@ Ext.override(Rally.data.PageableStore, {
 });
 
 Ext.override(Rally.ui.inlinefilter.FilterFieldFactory, {
-    _getBaseEditorConfig: function (fieldDef, context, model) {
+    _getBaseEditorConfig: function (fieldDef, context) {
         if (fieldDef.name === "CreatedBy") {
             let editorConfig = {
                 xtype: "rallyusersearchcombobox",
@@ -114,6 +120,16 @@ Ext.override(Rally.ui.inlinefilter.FilterFieldFactory, {
 
         return this.callParent(arguments);
     }
+});
+
+Ext.override(Rally.ui.inlinefilter.InlineFilterPanel, {
+    // We don't want chevrons in the tab panel
+    _alignChevron: function () {
+        if (this.chevron) { this.chevron.hide(); }
+    },
+
+    // Don't create the close buttons
+    _createCloseButton: function () { }
 });
 Ext.define('CustomAgile.multilevelfilter.ToggleButton', {
     extend: 'Rally.ui.Button',
@@ -201,7 +217,7 @@ multiFilterHelpHtml = `
         `;
 Ext.define('Utils.AncestorPiAppFilter', {
     alias: 'plugin.UtilsAncestorPiAppFilter',
-    version: "1.2.6",
+    version: "1.2.9",
     mixins: [
         'Ext.AbstractPlugin',
         'Rally.Messageable'
@@ -234,9 +250,16 @@ Ext.define('Utils.AncestorPiAppFilter', {
 
         /**
          * @cfg {Boolean}
-         * Set to false to prevent app from displaying a multi-level PI filter
+         * Set to true to show multilevel filter by default
          */
-        displayMultiLevelFilter: true,
+        displayMultiLevelFilter: false,
+
+        /**
+         * @cfg {String}
+         * Choose default setting for project scope
+         * Possible values: current, workspace, user
+         */
+        projectScope: 'user',
 
         /**
          * @cfg {Boolean}
@@ -371,16 +394,9 @@ Ext.define('Utils.AncestorPiAppFilter', {
 
     init: function (cmp) {
         this.cmp = cmp;
-
         this.cmp.on('resize', this._onCmpResize, this);
-
-        // Get the area where plugin controls will render
         this.renderArea = this.cmp.down('#' + this.renderAreaId);
-
-        // Get the area where filter button will render
         this.btnRenderArea = this.cmp.down('#' + this.btnRenderAreaId);
-
-        // Get the area where tabbed filter panel will render
         this.panelRenderArea = this.cmp.down('#' + this.panelRenderAreaId);
 
         // Extend app settings fields
@@ -392,19 +408,9 @@ Ext.define('Utils.AncestorPiAppFilter', {
         // Extend app default settings fields
         var appDefaults = this.cmp.defaultSettings;
         appDefaults['Utils.AncestorPiAppFilter.enableAncestorPiFilter2'] = false;
-        appDefaults['Utils.AncestorPiAppFilter.projectScope'] = 'current';
-        appDefaults['Utils.MultiLevelPiAppFilter.enableMultiLevelPiFilter'] = false;
+        appDefaults['Utils.AncestorPiAppFilter.projectScope'] = this.projectScope;
+        appDefaults['Utils.MultiLevelPiAppFilter.enableMultiLevelPiFilter'] = this.displayMultiLevelFilter;
         this.cmp.setDefaultSettings(appDefaults);
-
-        Ext.override(Rally.ui.inlinefilter.InlineFilterPanel, {
-            // We don't want chevrons in the tab panel
-            _alignChevron: function () {
-                if (this.chevron) { this.chevron.hide(); }
-            },
-
-            // Don't create the close buttons
-            _createCloseButton: function () { }
-        });
 
         // Add the control components then fire ready
         this._getTypeDefinitions().then({
@@ -556,9 +562,9 @@ Ext.define('Utils.AncestorPiAppFilter', {
         // below the given type (e.g. a timeline app). Otherwise if being used for an app
         // that only displays one PI type, we need to include those lower filters
         if (includeFiltersBelowType && Ext.String.startsWith(type.toLowerCase(), 'portfolioitem')) {
-            let childFilter = await this._getChildFiltersForType(type, multiLevelFilters);
-            if (childFilter) {
-                filters.push(childFilter);
+            let childFilters = this._getChildFiltersForType(type);
+            if (childFilters) {
+                filters = filters.concat(childFilters);
             }
         }
 
@@ -604,70 +610,25 @@ Ext.define('Utils.AncestorPiAppFilter', {
         return filters;
     },
 
-    // Starting at the lowest PI type, get a list of IDs that fit the given filter. 
-    // Traverse up the PI hierarchy until reaching the given type and return a list of IDs
-    // for that type that fit all filters from below
-    // Returns an array of object IDs
-    _getChildFiltersForType: async function (type, filters) {
-        let idFilter;
+    // Return array of filters for all child levels below given type prefixed 
+    // appropriately to filter at the given type
+    _getChildFiltersForType: function (type) {
         let types = this._getAllTypePaths();
+        let childProperty = '';
+        let childFilters = [];
 
-        // PI types are in order lowest to highest
-        for (let i = 0; i < types.length; i++) {
+        let startIndex = _.findIndex(types, function (t) {
+            return t.toLowerCase() === type.toLowerCase();
+        });
+
+        // Types are in order lowest to highest
+        for (let i = startIndex - 1; i >= 0; i--) {
             let currentType = types[i];
-
-            if (currentType.toLowerCase() === type.toLowerCase()) {
-                break;
-            }
-
-            // If this PI type has filters, get the Wsapi representation of it (this accounts for custom match conditions)
-            let currentFilter = filters[currentType] ? this._getWsapiFilter(currentType) : [];
-
-            if ((currentFilter && currentFilter.length) || idFilter) {
-                if (idFilter) {
-                    currentFilter.push(idFilter);
-                }
-
-                // To reduce the number of results returned, we include filters of higher level PI types
-                for (let j = i + 1; j < types.length; j++) {
-                    let parentType = types[j];
-                    let parentFilters = filters[parentType];
-
-                    if (parentFilters && parentFilters.length) {
-                        let parentFiltersForType = await this._getParentFilters(currentType, parentType, parentFilters);
-                        currentFilter = currentFilter.concat(parentFiltersForType);
-                    }
-                }
-
-                let records = await new Promise(function (resolve, reject) {
-                    this._getFilteredRecords(currentFilter, currentType, resolve, reject);
-                }.bind(this)).catch((e) => {
-                    Rally.ui.notify.Notifier.showError({ message: e });
-                    return [];
-                });
-
-                if (records.length) {
-                    let parents = _.map(records, function (id) {
-                        return (id.get('Parent') && id.get('Parent').ObjectID) ||
-                            (id.get('Feature') && id.get('Feature').ObjectID) || 0;
-                    });
-
-                    idFilter = new Rally.data.wsapi.Filter({
-                        property: 'ObjectID',
-                        operator: 'in',
-                        value: _.uniq(parents)
-                    });
-                }
-                else {
-                    idFilter = new Rally.data.wsapi.Filter({
-                        property: 'ObjectID',
-                        operator: '=',
-                        value: 0
-                    });
-                }
-            }
+            childProperty = childProperty + (childProperty.length ? '.' : '') + (currentType.toLowerCase() === 'hierarchicalrequirement' ? 'UserStories' : 'Children');
+            childFilters = childFilters.concat(this._getWsapiFilter(currentType, childProperty));
         }
-        return idFilter;
+
+        return childFilters;
     },
 
     // Given a type, a parent type and array of parent filters, convert the filters
@@ -939,7 +900,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
                         }
                     }
                 }
-                setTimeout(function () { this.tabPanel.setActiveTab(this.defaultTab); }.bind(this), 1500);
+                setTimeout(function () { this.tabPanel && this.tabPanel.setActiveTab(this.defaultTab); }.bind(this), 1500);
             }
             else {
                 this._clearAllFilters();
@@ -1201,11 +1162,11 @@ Ext.define('Utils.AncestorPiAppFilter', {
     _getSettingsFields: function (fields) {
         var currentSettings = Rally.getApp().getSettings();
         if (!currentSettings.hasOwnProperty('Utils.AncestorPiAppFilter.projectScope')) {
-            currentSettings['Utils.AncestorPiAppFilter.projectScope'] = 'user';
+            currentSettings['Utils.AncestorPiAppFilter.projectScope'] = this.projectScope;
         }
-        // if (!currentSettings.hasOwnProperty('Utils.MultiLevelPiAppFilter.enableMultiLevelPiFilter')) {
-        //     currentSettings['Utils.MultiLevelPiAppFilter.enableMultiLevelPiFilter'] = this.displayMultiLevelFilter;
-        // }
+        if (!currentSettings.hasOwnProperty('Utils.MultiLevelPiAppFilter.enableMultiLevelPiFilter')) {
+            currentSettings['Utils.MultiLevelPiAppFilter.enableMultiLevelPiFilter'] = this.displayMultiLevelFilter;
+        }
         var pluginSettingsFields = [{
             xtype: 'rallycheckboxfield',
             id: 'Utils.AncestorPiAppFilter.enableAncestorPiFilter2',
@@ -1228,6 +1189,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
             columns: 1,
             vertical: true,
             allowBlank: false,
+            name: 'Utils.AncestorPiAppFilter.projectScope',
             items: [{
                 boxLabel: "User's current project(s).",
                 name: 'Utils.AncestorPiAppFilter.projectScope',
@@ -1256,6 +1218,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
             id: 'Utils.MultiLevelPiAppFilter.enableMultiLevelPiFilter',
             name: 'Utils.MultiLevelPiAppFilter.enableMultiLevelPiFilter',
             fieldLabel: 'Enable multi-level portfolio item filter',
+            value: currentSettings['Utils.MultiLevelPiAppFilter.enableMultiLevelPiFilter']
         }
         ];
         pluginSettingsFields = _.map(pluginSettingsFields, function (pluginSettingsField) {
@@ -1363,7 +1326,8 @@ Ext.define('Utils.AncestorPiAppFilter', {
                     xtype: 'container',
                     itemId: 'scopeControlArea',
                     id: 'scopeControlArea',
-                    width: 250,
+                    width: this._showIgnoreProjectScopeControl() ? 250 : 0,
+                    margin: this._showIgnoreProjectScopeControl() ? '0 10 0 0' : 0,
                     layout: {
                         type: 'hbox',
                         align: 'middle'
@@ -1379,7 +1343,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
                         displayField: 'text',
                         valueField: 'value',
                         labelStyle: this.labelStyle,
-                        labelWidth: ownerLabelWidth,
+                        labelWidth: this._showIgnoreProjectScopeControl() ? ownerLabelWidth : 0,
                         fieldLabel: scopeControlByItself ? this.ownerOnlyLabel : this.ownerLabel,
                         // Don't set initial value with this component or it will override the state
                         storeConfig: {
@@ -1642,11 +1606,23 @@ Ext.define('Utils.AncestorPiAppFilter', {
     },
 
     _showAncestorFilter: function () {
-        return this.cmp.getSetting('Utils.AncestorPiAppFilter.enableAncestorPiFilter2');
+        let enableAncestorFilter = this.cmp.getSetting('Utils.AncestorPiAppFilter.enableAncestorPiFilter2');
+
+        if (enableAncestorFilter === undefined) {
+            return false;
+        }
+
+        return enableAncestorFilter;
     },
 
     _showIgnoreProjectScopeControl: function () {
-        return this.cmp.getSetting('Utils.AncestorPiAppFilter.projectScope') === 'user';
+        let showProjectScope = this.cmp.getSetting('Utils.AncestorPiAppFilter.projectScope') === 'user';
+
+        if (showProjectScope === undefined) {
+            return this.projectScope;
+        }
+
+        return showProjectScope;
     },
 
     _ignoreProjectScope: function () {
@@ -1659,8 +1635,8 @@ Ext.define('Utils.AncestorPiAppFilter', {
             // If the control is shown, that values overrides the ignoreScope app setting
             result = this.renderArea.down('#ignoreScopeControl').getValue();
         }
-        else if (this.cmp.getSetting('Utils.AncestorPiAppFilter.projectScope') === 'workspace') {
-            result = true;
+        else if (this.cmp.getSetting('Utils.AncestorPiAppFilter.projectScope') === undefined) {
+            result = this.projectScope === 'workspace';
         }
         return result;
     },
@@ -1704,11 +1680,45 @@ Ext.define('Utils.AncestorPiAppFilter', {
     },
 
     /**
-     * Return a list of artifact types AT or below the selected artifact type,
-     * that are an ancestor of the given model, or null if there are no pi type
+     * Return a list of artifact types AT or below selectedPiTypePath,
+     * that are an ancestor of the given modelName, or null if there are no pi type
      * ancestors for the given model.
      */
     _getAncestorTypeArray: function (modelName, selectedPiTypePath) {
+        var selectedPiTypeIndex;
+        var modelNamePiTypeIndex;
+        var model = modelName.toLowerCase();
+        var selectedModel = selectedPiTypePath.toLowerCase();
+
+        if (model === 'defect') {
+            selectedPiTypeIndex = _.findIndex(this.allTypes, function (type) {
+                return type.get('TypePath').toLowerCase() === selectedModel;
+            });
+            return this.allTypes.slice(0, selectedPiTypeIndex + 1);
+        }
+
+        modelNamePiTypeIndex = _.findIndex(this.allTypes, function (type) {
+            return type.get('TypePath').toLowerCase() === model;
+        });
+        selectedPiTypeIndex = _.findIndex(this.allTypes, function (type) {
+            return type.get('TypePath').toLowerCase() === selectedModel;
+        });
+
+        if (modelNamePiTypeIndex < selectedPiTypeIndex) {
+            // Don't include the current model pi in the list of ancestors
+            // Include the selcted pi type ancestor
+            return this.allTypes.slice(modelNamePiTypeIndex + 1, selectedPiTypeIndex + 1);
+        }
+
+        return null;
+    },
+
+    /**
+     * Return a list of artifact types below given modelName, up to and including selectedPiTypePath
+     * that are children of the given modelName, or null if there are no pi type
+     * ancestors for the given model.
+     */
+    _getChildrenTypeArray: function (modelName, selectedPiTypePath) {
         var selectedPiTypeIndex;
         var modelNamePiTypeIndex;
         var model = modelName.toLowerCase();
@@ -1741,7 +1751,13 @@ Ext.define('Utils.AncestorPiAppFilter', {
         Multi-Level Filter functions
     */
     _showMultiLevelFilter: function () {
-        return this.cmp.getSetting('Utils.MultiLevelPiAppFilter.enableMultiLevelPiFilter');
+        let showFilters = this.cmp.getSetting('Utils.MultiLevelPiAppFilter.enableMultiLevelPiFilter');
+
+        if (showFilters === undefined) {
+            return this.displayMultiLevelFilter;
+        }
+
+        return showFilters;
     },
 
     _addFilters: function () {
@@ -1753,18 +1769,16 @@ Ext.define('Utils.AncestorPiAppFilter', {
                         this.showFiltersBtn = this.btnRenderArea.add(
                             {
                                 xtype: 'multifiltertogglebtn',
-                                cls: ' rly-small',
+                                cls: ` rly-small ${this.filtersHidden ? 'secondary' : 'primary'}`,
                                 handler: this._toggleFilters,
                                 scope: this,
                                 stateId: this.cmp.getContext().getScopedStateId(`multi-filter-toggle-button`),
                                 listeners: {
                                     added: function (btn) {
                                         if (btn.filtersHidden) {
-                                            btn.addCls('secondary');
                                             btn.setToolTipText('Show Filters');
                                         }
                                         else {
-                                            btn.addCls('primary');
                                             btn.setToolTipText('Hide Filters');
                                         }
                                     }
@@ -2146,6 +2160,18 @@ Ext.define('Utils.AncestorPiAppFilter', {
 Ext.define('CustomAgile.ui.renderer.RecordFieldRendererFactory', {
     singleton: true,
 
+    colorPalette: {
+        '#105cab': 'Dark Blue',
+        '#21a2e0': 'Blue',
+        '#107c1e': 'Green',
+        '#4a1d7e': 'Purple',
+        '#df1a7b': 'Pink',
+        '#ee6c19': 'Burnt Orange',
+        '#f9a814': 'Orange',
+        '#fce205': 'Yellow',
+        '#848689': 'Grey'
+    },
+
     getFieldDisplayValue: function (record, field, delimiter, cleanseForExport) {
         if (!record || !field) {
             return '';
@@ -2162,6 +2188,9 @@ Ext.define('CustomAgile.ui.renderer.RecordFieldRendererFactory', {
         }
         else if (Ext.isDate(val)) {
             val = Rally.util.DateTime.formatWithDefaultDateTime(val);
+        }
+        else if (field === 'DisplayColor') {
+            val = this.colorPalette[val] || val;
         }
         else if (field === 'Parent') {
             val = (val && (val.FormattedID && val.Name && val.FormattedID + ': ' + val.Name) || val._refObjectName) || (record.get('Feature') && ((record.get('Feature').FormattedID && record.get('Feature').Name && record.get('Feature').FormattedID + ': ' + record.get('Feature').Name) || record.get('Feature')._refObjectName)) || 'No Parent';
@@ -2723,6 +2752,9 @@ Ext.define('Calculator', {
             } else {
                 return '-- No Entry --';
             }
+        } else if (field.name === 'DisplayColor') {
+            let color = CustomAgile.ui.renderer.RecordFieldRendererFactory.colorPalette[value];
+            return color ? color : value;
         } else {
             return value;
         }
@@ -2756,6 +2788,7 @@ Ext.define('BarChart', {
 
     config: {
         chartConfig: {
+            isAnimate: false,
             chart: { type: 'bar' },
             title: {
                 text: ''
@@ -2781,14 +2814,15 @@ Ext.define('BarChart', {
                         enabled: false
                     },
                     showInLegend: true,
-                    colorByPoint: false
+                    colorByPoint: false,
+                    animation: false
                 }
             }
         },
         calculatorType: 'BarCalculator'
     },
 
-    constructor: function(config) {
+    constructor: function (config) {
         config = config || {};
         this.mergeConfig(config);
 
@@ -2845,14 +2879,15 @@ Ext.define('ColumnChart', {
                         enabled: false
                     },
                     showInLegend: false,
-                    colorByPoint: true
+                    colorByPoint: true,
+                    animation: false
                 }
             }
         },
         calculatorType: 'ColumnCalculator'
     },
 
-    constructor: function(config) {
+    constructor: function (config) {
         config = config || {};
         this.mergeConfig(config);
 
@@ -2889,7 +2924,7 @@ Ext.define('PieChart', {
                 plotBorderWidth: null,
                 plotShadow: false
             },
-            title: {text: ''},
+            title: { text: '' },
             tooltip: {
                 headerFormat: '',
                 pointFormat: '<b>{point.name}:</b> {point.percentage:.1f}% ({point.y}/{point.total})'
@@ -2904,20 +2939,68 @@ Ext.define('PieChart', {
                         style: {
                             color: 'black'
                         }
-                    }
+                    },
+                    animation: false
                 }
             }
         },
         calculatorType: 'PieCalculator'
     },
 
-    constructor: function(config) {
+    constructor: function (config) {
         config = config || {};
         this.mergeConfig(config);
         this.callParent([this.config]);
     }
 });
 
+Ext.define('CustomAgile.ui.ChartGridToggleButton', {
+    extend: 'Rally.ui.gridboard.GridBoardToggle',
+    alias: 'widget.chartgridtogglebtn',
+
+    stateful: true,
+    stateEvents: ['toggle'],
+
+    _getItems: function () {
+        return []
+            .concat(this._getToggleConfig('grid', { tooltipText: 'Switch to Grid View', iconCls: 'icon-grid', anchorOffset: 65 }))
+            .concat(this._getToggleConfig('chart', { tooltipText: 'Switch to Chart View', anchorOffset: 45, iconCls: 'icon-pie' }))
+            .concat(this._getToggleConfig('both', { tooltipText: 'Show Both Grid and Chart', anchorOffset: 90, iconCls: 'icon-both', text: '+' }));
+    },
+
+    _getToggleConfig: function (toggleState, options) {
+        return {
+            itemId: toggleState,
+            cls: 'toggle ' + toggleState,
+            iconCls: options.iconCls,
+            frame: false,
+            text: options.text,
+            toolTipConfig: {
+                html: options.tooltipText,
+                anchor: 'top',
+                hideDelay: 0,
+                constrainPosition: false,
+                anchorOffset: options.anchorOffset,
+                mouseOffset: [-1 * options.anchorOffset, 0]
+            }
+        };
+    },
+
+    getState: function () {
+        return { toggleState: this.toggleState };
+    },
+
+    applyState: function (state) {
+        this.toggleState = state.toggleState;
+        this.items.each(function (item) {
+            if (item.getItemId() === this.toggleState) {
+                item.addCls(this.activeButtonCls);
+            } else {
+                item.removeCls(this.activeButtonCls);
+            }
+        }, this);
+    }
+});
 Ext.define('Settings', {
     singleton: true,
 
@@ -3230,36 +3313,61 @@ Ext.define('CustomChartApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
 
-    layout: {
-        type: 'vbox',
-        align: 'stretch'
-    },
+    layout: 'border',
 
     items: [{
-        id: Utils.AncestorPiAppFilter.RENDER_AREA_ID,
+        region: 'north',
         xtype: 'container',
-        layout: {
-            type: 'hbox',
-            align: 'middle',
-            defaultMargins: '0 10 10 0',
-        }
+        itemId: 'filter-area',
+        margin: 10,
+        overflowY: 'auto', // flex: 1,
+        items: [{
+            id: Utils.AncestorPiAppFilter.RENDER_AREA_ID,
+            xtype: 'container',
+            layout: {
+                type: 'hbox',
+                align: 'middle',
+                defaultMargins: '0 10 10 0',
+            }
+        }, {
+            id: Utils.AncestorPiAppFilter.PANEL_RENDER_AREA_ID,
+            xtype: 'container',
+            layout: {
+                type: 'hbox',
+                align: 'middle',
+                defaultMargins: '0 10 10 0',
+            }
+        }]
     }, {
-        id: Utils.AncestorPiAppFilter.PANEL_RENDER_AREA_ID,
+        itemId: 'chart-area',
+        region: 'center',
         xtype: 'container',
-        layout: {
-            type: 'hbox',
-            align: 'middle',
-            defaultMargins: '0 10 10 0',
-        }
-    }, {
-        id: 'grid-area',
-        itemId: 'grid-area',
-        xtype: 'container',
-        flex: 1,
+        flex: 2,
         overflowY: 'auto',
         type: 'vbox',
         align: 'stretch',
-    }],
+        defaultMargins: 10
+    },
+    {
+        itemId: 'grid-area',
+        region: 'south',
+        margin: 10,
+        split: {
+            draggable: true,
+            size: 7,
+            margin: '8 0 8 0'
+        },
+        xtype: 'panel',
+        animCollapse: false,
+        collapseMode: 'mini',
+        hideCollapseTool: true,
+        // collapsed: true,
+        border: false,
+        height: 260,
+        type: 'vbox',
+        align: 'stretch',
+    }
+    ],
     config: {
         defaultSettings: {
             types: 'Defect',
@@ -3279,6 +3387,11 @@ Ext.define('CustomChartApp', {
             this.fireEvent('appsettingsneeded'); //todo: does this work?
         }
         else {
+            this.addExportBtn();
+
+            this.down('#grid-area').on('resize', this.onGridAreaResize, this);
+            this.down('#filter-area').on('resize', this.onGridAreaResize, this);
+
             this.ancestorFilterPlugin = Ext.create('Utils.AncestorPiAppFilter', {
                 ptype: 'UtilsAncestorPiAppFilter',
                 pluginId: 'ancestorFilterPlugin',
@@ -3304,6 +3417,8 @@ Ext.define('CustomChartApp', {
                                     select: this._addChart,
                                     change: this._addChart
                                 });
+                                this.addToggleBtn();
+                                // this.addShowGridBtn();
                                 this._addChart();
                             }
                         });
@@ -3314,13 +3429,96 @@ Ext.define('CustomChartApp', {
         }
     },
 
+    addExportBtn: function () {
+        this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).add({
+            xtype: 'rallybutton',
+            id: 'exportReportBtn',
+            iconCls: 'icon-export',
+            iconOnly: false,
+            cls: 'x4-btn secondary rly-small x4-unselectable export',
+            toolTipConfig: {
+                html: 'Export',
+                anchor: 'top',
+                hideDelay: 0
+            },
+            handler: (btn) => {
+                let menu = Ext.widget({
+                    xtype: 'rallymenu',
+                    items: [{
+                        text: 'Export to CSV...',
+                        handler: this._export,
+                        scope: this
+                    }]
+                });
+
+                menu.showBy(btn.getEl());
+
+                if (btn.toolTip) {
+                    btn.toolTip.hide();
+                }
+            }
+        });
+    },
+
+    // addShowGridBtn: function () {
+    //     this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).add({
+    //         xtype: 'rallybutton',
+    //         id: 'showGridBtn',
+    //         text: 'Show Data Grids <span class="icon-arrow-down" style="color:red"></span>',
+    //         handler: (btn) => {
+    //             this.down('#grid-area').toggleCollapse();
+
+    //             btn.setText(btn.text === 'Show Data Grids' ? 'Hide Data Grids' : 'Show Data Grids');
+    //         }
+    //     });
+    // },
+
+    addToggleBtn: function () {
+        this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).add({
+            xtype: 'chartgridtogglebtn',
+            itemId: 'chartGridToggleBtn',
+            toggleState: 'chart',
+            stateId: this.getContext().getScopedStateId('customchart-toggle-btn'),
+            listeners: {
+                scope: this,
+                toggle: this.onChartGridToggle
+            }
+        });
+    },
+
+    onChartGridToggle: function (btn, toggleState) {
+        if (toggleState === 'chart') {
+            this.down('#grid-area').hide();
+            this.grids.hide();
+            this.gridboard.show();
+            this.gridboard.setHeight(this.down('#chart-area').getHeight());
+            this.gridboard.getGridOrBoard().setHeight(this.down('#chart-area').getHeight());
+        }
+        else if (toggleState === 'grid') {
+            this.down('#grid-area').hide();
+            this.gridboard.hide();
+            this.down('#chart-area').add(this.grids);
+            this.grids.show();
+            this.grids.setHeight(this.down('#chart-area').getHeight());
+            this.gridboard.setHeight(this.down('#chart-area').getHeight());
+            this.gridboard.getGridOrBoard().setHeight(this.down('#chart-area').getHeight());
+        }
+        else if (toggleState === 'both') {
+            this.down('#grid-area').show();
+            this.down('#grid-area').add(this.grids);
+            this.grids.show();
+            this.gridboard.show();
+            this.grids.setHeight(this.down('#grid-area').getHeight());
+        }
+        this.onGridAreaResize();
+    },
+
     // Usual monkey business to size gridboards
     onResize: function () {
         this.callParent(arguments);
-        var gridArea = this.down('#grid-area');
-        var gridboard = this.down('rallygridboard');
-        if (gridArea && gridboard) {
-            gridboard.setHeight(gridArea.getHeight());
+        var chartArea = this.down('#chart-area');
+        if (chartArea && this.gridboard) {
+            this.gridboard.setHeight(chartArea.getHeight());
         }
     },
 
@@ -3374,9 +3572,9 @@ Ext.define('CustomChartApp', {
 
         this._cancelPreviousLoad(thisStatus);
 
-        var gridArea = this.down('#grid-area');
-        gridArea.removeAll();
-        gridArea.setLoading(true);
+        var chartArea = this.down('#chart-area');
+        chartArea.removeAll();
+        chartArea.setLoading(true);
 
         var context = this.getContext();
         var dataContext = context.getDataContext();
@@ -3386,7 +3584,7 @@ Ext.define('CustomChartApp', {
         this._getFilters(thisStatus).then((filters) => {
 
             if (thisStatus.loadingFailed) {
-                gridArea.setLoading(false);
+                chartArea.setLoading(false);
                 return;
             }
 
@@ -3398,24 +3596,8 @@ Ext.define('CustomChartApp', {
                 gridBoardConfig = {
                     xtype: 'rallygridboard',
                     toggleState: 'chart',
-                    height: gridArea.getHeight(),
+                    height: chartArea.getHeight(),
                     chartConfig: this._getChartConfig(),
-                    plugins: [{
-                        ptype: 'rallygridboardactionsmenu',
-                        menuItems: [{
-                            text: 'Export to CSV...',
-                            handler: this._export,
-                            scope: this
-                        }],
-                        buttonConfig: {
-                            iconCls: 'icon-export',
-                            toolTipConfig: {
-                                html: 'Export',
-                                anchor: 'top',
-                                hideDelay: 0
-                            }
-                        }
-                    }],
                     context: context,
                     modelNames: modelNames,
                     storeConfig: {
@@ -3425,7 +3607,7 @@ Ext.define('CustomChartApp', {
                     }
                 };
 
-            this.gridboard = gridArea.add(gridBoardConfig);
+            this.gridboard = chartArea.add(gridBoardConfig);
         });
     },
 
@@ -3479,6 +3661,7 @@ Ext.define('CustomChartApp', {
             config = {
                 xtype: chartType,
                 enableStacking: !!stackField,
+                title: { text: 'test' },
                 chartColors: [
                     "#FF8200", // $orange
                     "#F6A900", // $gold
@@ -3491,13 +3674,6 @@ Ext.define('CustomChartApp', {
                     "#DA1884", // $pink,
                     "#C0C0C0" // $grey4
                 ],
-                // chartConfig: {
-                //     legend: {
-                //         floating: true,
-                //         enabled: true,
-                //         labelFormat: '{name} {data}'
-                //     },
-                // },
                 storeConfig: {
                     storeId: 'chartStore',
                     context: this.getContext().getDataContext(),
@@ -3511,6 +3687,10 @@ Ext.define('CustomChartApp', {
                     listeners: {
                         scope: this,
                         load: function (store, records, successful) {
+                            if (records.length === 10000) {
+                                Rally.ui.notify.Notifier.showWarning({ message: 'Results limited to 10,000 to avoid timeouts' });
+                            }
+
                             if (!successful) {
                                 Rally.ui.notify.Notifier.showError({ message: 'Failed to load data, most likely caused by a server timeout. Try adjusting your scope or filters to reduce the amount of data returned.' });
                             }
@@ -3529,7 +3709,12 @@ Ext.define('CustomChartApp', {
                 listeners: {
                     scope: this,
                     storesLoaded: function () {
-                        this.down('#grid-area').setLoading(false);
+                        this.down('#chart-area').setLoading(false);
+                    },
+                    snapshotsAggregated: function (chart) {
+                        this._addGrids(chart);
+                        let toggleBtn = this.down('#chartGridToggleBtn');
+                        this.onChartGridToggle(toggleBtn, toggleBtn.toggleState);
                     }
                 }
             };
@@ -3544,6 +3729,186 @@ Ext.define('CustomChartApp', {
         }
 
         return config;
+    },
+
+    onGridAreaResize: function () {
+        let tabPanel = this.down('#grid-area-tab-panel');
+
+        if (tabPanel && !tabPanel.isHidden()) {
+            if (this.down('#grid-area').isHidden()) {
+                tabPanel.setHeight(this.down('#chart-area').getHeight());
+            }
+            else {
+                tabPanel.setHeight(this.down('#grid-area').getHeight());
+            }
+            this.down('#summaryGrid').setHeight(tabPanel.getHeight() - 25);
+            this.down('#detailedGrid').setHeight(tabPanel.getHeight() - 25);
+        }
+
+        if (this.gridboard && !this.gridboard.isHidden()) {
+            this.gridboard.setHeight(this.down('#chart-area').getHeight());
+        }
+    },
+
+    _addGrids: function (chart) {
+        this.down('#grid-area').removeAll();
+        let store = chart.loadedStores;
+        let aggregationType = this.getSetting('aggregationType');
+        let aggregationTypeField = ChartUtils.getFieldForAggregationType(aggregationType);
+        let aggregationField = this.getSetting('aggregationField');
+        let stackField = this._getStackingSetting();
+        let isFeatureFieldForStory = this._isFeatureFieldForStoryChart();
+        let aggregationDisplayName = isFeatureFieldForStory ? (this.featureModel && this.featureModel.getField(aggregationField) && this.featureModel.getField(aggregationField).displayName) || aggregationField :
+            (this.models[0] && this.models[0].getField(aggregationField) && this.models[0].getField(aggregationField).displayName) || aggregationField;
+        let stackFieldDisplayName = '';
+        if (stackField) {
+            stackFieldDisplayName = (this.models[0] && this.models[0].getField(stackField) && this.models[0].getField(stackField).displayName) || stackField;
+        }
+        let items = [];
+
+        if (chart.chartData) {
+            let data = [];
+            let cols = [];
+
+            if (stackField) {
+                let categories = chart.chartData.categories;
+                cols = [
+                    { text: aggregationDisplayName, dataIndex: 'name', flex: 3 },
+                    { text: stackFieldDisplayName, dataIndex: 'stackField', flex: 3 },
+                    { text: aggregationType === 'count' ? 'Count' : aggregationTypeField, dataIndex: 'value', flex: 1 }
+                ];
+
+                for (let i = 0; i < categories.length; i++) {
+                    let c = categories[i];
+                    let secondaryRows = [];
+
+                    let primaryRow = {
+                        name: c,
+                        stackField: '',
+                        value: 0
+                    }
+
+                    for (let s of chart.chartData.series) {
+                        let val = s.data[i];
+
+                        if (val) {
+                            primaryRow.value += val;
+
+                            secondaryRows.push({
+                                name: '',
+                                stackField: s.name,
+                                value: val
+                            });
+                        }
+                    }
+
+                    data = data.concat([primaryRow].concat(secondaryRows));
+                }
+            }
+            else {
+                let series = (chart.chartData && chart.chartData.series.length && chart.chartData.series[0]) || [];
+
+                cols = [
+                    { text: aggregationDisplayName, dataIndex: 'name', flex: 3 },
+                    { text: aggregationType === 'count' ? 'Count' : aggregationTypeField, dataIndex: 'value', flex: 1 }
+                ];
+
+                data = _.map(series.data, function (r) {
+                    return { name: r[0], value: r[1] };
+                });
+            }
+            let containerWidth = this.down('#grid-area').getWidth() || this.down('#chart-area').getWidth();
+
+            items.push({
+                title: 'Summary',
+                layout: {
+                    type: 'hbox',
+                    pack: 'center'
+                },
+                items: [{
+                    xtype: 'rallygrid',
+                    itemId: 'summaryGrid',
+                    store: Ext.create('Rally.data.custom.Store', {
+                        data: data,
+                        pageSize: data.length
+                    }),
+                    columnCfgs: cols,
+                    sortableColumns: false,
+                    showRowActionsColumn: false,
+                    showPagingToolbar: false,
+                    enableEditing: false,
+                    height: this.down('#grid-area').getHeight() - 20,
+                    width: stackField ? containerWidth > 800 ? 800 : containerWidth : containerWidth > 650 ? 650 : containerWidth,
+                    // flex: 1,
+                    overflowY: 'auto'
+                }]
+            });
+        }
+
+        if (store) {
+            let columns = ['FormattedID', 'Name'];
+
+            if (isFeatureFieldForStory) {
+                columns.push({
+                    text: aggregationDisplayName,
+                    // xtype: 'templatecolumn',
+                    // tpl: `{${aggregationField}}`
+                    dataIndex: 'Feature',
+                    renderer: function (value) {
+                        return CustomAgile.ui.renderer.RecordFieldRendererFactory.getFieldDisplayValue(value, aggregationField, '; ', true)
+                    }
+                });
+            }
+            else {
+                columns.push(aggregationField);
+            }
+
+            if (aggregationType !== 'count') {
+                columns.push(aggregationTypeField);
+            }
+
+            if (stackField) {
+                columns.push(stackField);
+            }
+
+            items.push({
+                title: 'Detailed',
+                items: [{
+                    xtype: 'rallygrid',
+                    itemId: 'detailedGrid',
+                    store: store,
+                    //     Ext.create('Ext.data.Store', {
+                    //     model: this.models[0], // this.getSetting('types') === 'HierarchicalRequirement' && this.getSetting('aggregationLevel') || this.getSetting('types'),
+                    //     data: _.map(store.getRange(), function (r) {
+                    //         if (isFeatureFieldForStory) {
+                    //             r.raw[aggregationField] = r.get('Feature') ? CustomAgile.ui.renderer.RecordFieldRendererFactory.getFieldDisplayValue(r.get('Feature'), aggregationField, '; ', true) || 'None' : 'No Feature';
+                    //         }
+                    //         return r.raw;
+                    //     })
+                    // }),
+                    columnCfgs: columns,
+                    sortableColumns: false, // Sorting the store triggers reloads in the chart and throws errors
+                    showRowActionsColumn: false,
+                    showPagingToolbar: false,
+                    enableEditing: false,
+                    height: this.down('#grid-area').getHeight() - 20,
+                    flex: 1,
+                    overflowY: 'auto'
+                }]
+            });
+        }
+
+        this.grids = this.down('#grid-area').add({
+            xtype: 'tabpanel',
+            itemId: 'grid-area-tab-panel',
+            width: '98%',
+            cls: 'blue-tabs',
+            minTabWidth: 100,
+            height: this.down('#grid-area').getHeight(),
+            plain: true,
+            autoRender: true,
+            items: items,
+        });
     },
 
     onTimeboxScopeChange: function () {
@@ -3704,10 +4069,77 @@ Ext.define('CustomChartApp', {
 
     <style type="text/css">
 
-.app {
-     /* Add app styles here */
+.x-border-layout-ct {
+    background-color: white;
 }
 
+#exportReportBtn { 
+  left: auto !important;
+  right: 70px !important;
+}
+
+.x-splitter {
+  background-color: #f6f6f6;
+  border-bottom: 1px solid;
+  border-top: 1px solid;
+  border-color: #d8d8d8;
+}
+
+.x-btn.toggle.rly-left, .x-btn.toggle.rly-right {
+  border-width: 1px !important;
+}
+
+.toggle-button-group.toggle-button-group-3 {
+  width: 115px;
+}
+
+.x-btn.toggle.both {
+  width: 45px;
+  font-size: 14px;
+  padding: 0;
+  line-height: 16px;
+}
+
+.x-btn.toggle.both span  {
+  width: 42px;
+}
+
+.x-btn.toggle.both span.x-btn-inner  {
+  padding: 0;
+  font-size: 16px;
+  color: #00a9e0;
+}
+
+.x-btn.toggle.both.rly-active span.x-btn-inner  {
+  padding: 0;
+  font-size: 14px;
+  color: white;
+} 
+
+
+.icon-both {
+    font-family: 'Rally' !important;
+    speak: none;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+}
+
+.icon-both:before {
+    content: "V";
+    padding-right: 4px;
+    padding-top: 1px;
+}
+
+.icon-both:after {
+    content: "\e02a";
+    text-decoration: inherit;
+    display: inline-block;
+    speak: none;
+}
 .blue-tabs .x-tab-bar .x-tab-default {
   background-color: white;
   border-radius: 4px 4px 0 0;

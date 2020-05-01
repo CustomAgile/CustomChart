@@ -2,36 +2,61 @@ Ext.define('CustomChartApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
 
-    layout: {
-        type: 'vbox',
-        align: 'stretch'
-    },
+    layout: 'border',
 
     items: [{
-        id: Utils.AncestorPiAppFilter.RENDER_AREA_ID,
+        region: 'north',
         xtype: 'container',
-        layout: {
-            type: 'hbox',
-            align: 'middle',
-            defaultMargins: '0 10 10 0',
-        }
+        itemId: 'filter-area',
+        margin: 10,
+        overflowY: 'auto', // flex: 1,
+        items: [{
+            id: Utils.AncestorPiAppFilter.RENDER_AREA_ID,
+            xtype: 'container',
+            layout: {
+                type: 'hbox',
+                align: 'middle',
+                defaultMargins: '0 10 10 0',
+            }
+        }, {
+            id: Utils.AncestorPiAppFilter.PANEL_RENDER_AREA_ID,
+            xtype: 'container',
+            layout: {
+                type: 'hbox',
+                align: 'middle',
+                defaultMargins: '0 10 10 0',
+            }
+        }]
     }, {
-        id: Utils.AncestorPiAppFilter.PANEL_RENDER_AREA_ID,
+        itemId: 'chart-area',
+        region: 'center',
         xtype: 'container',
-        layout: {
-            type: 'hbox',
-            align: 'middle',
-            defaultMargins: '0 10 10 0',
-        }
-    }, {
-        id: 'grid-area',
-        itemId: 'grid-area',
-        xtype: 'container',
-        flex: 1,
+        flex: 2,
         overflowY: 'auto',
         type: 'vbox',
         align: 'stretch',
-    }],
+        defaultMargins: 10
+    },
+    {
+        itemId: 'grid-area',
+        region: 'south',
+        margin: 10,
+        split: {
+            draggable: true,
+            size: 7,
+            margin: '8 0 8 0'
+        },
+        xtype: 'panel',
+        animCollapse: false,
+        collapseMode: 'mini',
+        hideCollapseTool: true,
+        // collapsed: true,
+        border: false,
+        height: 260,
+        type: 'vbox',
+        align: 'stretch',
+    }
+    ],
     config: {
         defaultSettings: {
             types: 'Defect',
@@ -51,6 +76,11 @@ Ext.define('CustomChartApp', {
             this.fireEvent('appsettingsneeded'); //todo: does this work?
         }
         else {
+            this.addExportBtn();
+
+            this.down('#grid-area').on('resize', this.onGridAreaResize, this);
+            this.down('#filter-area').on('resize', this.onGridAreaResize, this);
+
             this.ancestorFilterPlugin = Ext.create('Utils.AncestorPiAppFilter', {
                 ptype: 'UtilsAncestorPiAppFilter',
                 pluginId: 'ancestorFilterPlugin',
@@ -76,6 +106,8 @@ Ext.define('CustomChartApp', {
                                     select: this._addChart,
                                     change: this._addChart
                                 });
+                                this.addToggleBtn();
+                                // this.addShowGridBtn();
                                 this._addChart();
                             }
                         });
@@ -86,13 +118,96 @@ Ext.define('CustomChartApp', {
         }
     },
 
+    addExportBtn: function () {
+        this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).add({
+            xtype: 'rallybutton',
+            id: 'exportReportBtn',
+            iconCls: 'icon-export',
+            iconOnly: false,
+            cls: 'x4-btn secondary rly-small x4-unselectable export',
+            toolTipConfig: {
+                html: 'Export',
+                anchor: 'top',
+                hideDelay: 0
+            },
+            handler: (btn) => {
+                let menu = Ext.widget({
+                    xtype: 'rallymenu',
+                    items: [{
+                        text: 'Export to CSV...',
+                        handler: this._export,
+                        scope: this
+                    }]
+                });
+
+                menu.showBy(btn.getEl());
+
+                if (btn.toolTip) {
+                    btn.toolTip.hide();
+                }
+            }
+        });
+    },
+
+    // addShowGridBtn: function () {
+    //     this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).add({
+    //         xtype: 'rallybutton',
+    //         id: 'showGridBtn',
+    //         text: 'Show Data Grids <span class="icon-arrow-down" style="color:red"></span>',
+    //         handler: (btn) => {
+    //             this.down('#grid-area').toggleCollapse();
+
+    //             btn.setText(btn.text === 'Show Data Grids' ? 'Hide Data Grids' : 'Show Data Grids');
+    //         }
+    //     });
+    // },
+
+    addToggleBtn: function () {
+        this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).add({
+            xtype: 'chartgridtogglebtn',
+            itemId: 'chartGridToggleBtn',
+            toggleState: 'chart',
+            stateId: this.getContext().getScopedStateId('customchart-toggle-btn'),
+            listeners: {
+                scope: this,
+                toggle: this.onChartGridToggle
+            }
+        });
+    },
+
+    onChartGridToggle: function (btn, toggleState) {
+        if (toggleState === 'chart') {
+            this.down('#grid-area').hide();
+            this.grids.hide();
+            this.gridboard.show();
+            this.gridboard.setHeight(this.down('#chart-area').getHeight());
+            this.gridboard.getGridOrBoard().setHeight(this.down('#chart-area').getHeight());
+        }
+        else if (toggleState === 'grid') {
+            this.down('#grid-area').hide();
+            this.gridboard.hide();
+            this.down('#chart-area').add(this.grids);
+            this.grids.show();
+            this.grids.setHeight(this.down('#chart-area').getHeight());
+            this.gridboard.setHeight(this.down('#chart-area').getHeight());
+            this.gridboard.getGridOrBoard().setHeight(this.down('#chart-area').getHeight());
+        }
+        else if (toggleState === 'both') {
+            this.down('#grid-area').show();
+            this.down('#grid-area').add(this.grids);
+            this.grids.show();
+            this.gridboard.show();
+            this.grids.setHeight(this.down('#grid-area').getHeight());
+        }
+        this.onGridAreaResize();
+    },
+
     // Usual monkey business to size gridboards
     onResize: function () {
         this.callParent(arguments);
-        var gridArea = this.down('#grid-area');
-        var gridboard = this.down('rallygridboard');
-        if (gridArea && gridboard) {
-            gridboard.setHeight(gridArea.getHeight());
+        var chartArea = this.down('#chart-area');
+        if (chartArea && this.gridboard) {
+            this.gridboard.setHeight(chartArea.getHeight());
         }
     },
 
@@ -146,9 +261,9 @@ Ext.define('CustomChartApp', {
 
         this._cancelPreviousLoad(thisStatus);
 
-        var gridArea = this.down('#grid-area');
-        gridArea.removeAll();
-        gridArea.setLoading(true);
+        var chartArea = this.down('#chart-area');
+        chartArea.removeAll();
+        chartArea.setLoading(true);
 
         var context = this.getContext();
         var dataContext = context.getDataContext();
@@ -158,7 +273,7 @@ Ext.define('CustomChartApp', {
         this._getFilters(thisStatus).then((filters) => {
 
             if (thisStatus.loadingFailed) {
-                gridArea.setLoading(false);
+                chartArea.setLoading(false);
                 return;
             }
 
@@ -170,24 +285,8 @@ Ext.define('CustomChartApp', {
                 gridBoardConfig = {
                     xtype: 'rallygridboard',
                     toggleState: 'chart',
-                    height: gridArea.getHeight(),
+                    height: chartArea.getHeight(),
                     chartConfig: this._getChartConfig(),
-                    plugins: [{
-                        ptype: 'rallygridboardactionsmenu',
-                        menuItems: [{
-                            text: 'Export to CSV...',
-                            handler: this._export,
-                            scope: this
-                        }],
-                        buttonConfig: {
-                            iconCls: 'icon-export',
-                            toolTipConfig: {
-                                html: 'Export',
-                                anchor: 'top',
-                                hideDelay: 0
-                            }
-                        }
-                    }],
                     context: context,
                     modelNames: modelNames,
                     storeConfig: {
@@ -197,7 +296,7 @@ Ext.define('CustomChartApp', {
                     }
                 };
 
-            this.gridboard = gridArea.add(gridBoardConfig);
+            this.gridboard = chartArea.add(gridBoardConfig);
         });
     },
 
@@ -251,6 +350,7 @@ Ext.define('CustomChartApp', {
             config = {
                 xtype: chartType,
                 enableStacking: !!stackField,
+                title: { text: 'test' },
                 chartColors: [
                     "#FF8200", // $orange
                     "#F6A900", // $gold
@@ -263,13 +363,6 @@ Ext.define('CustomChartApp', {
                     "#DA1884", // $pink,
                     "#C0C0C0" // $grey4
                 ],
-                // chartConfig: {
-                //     legend: {
-                //         floating: true,
-                //         enabled: true,
-                //         labelFormat: '{name} {data}'
-                //     },
-                // },
                 storeConfig: {
                     storeId: 'chartStore',
                     context: this.getContext().getDataContext(),
@@ -283,6 +376,10 @@ Ext.define('CustomChartApp', {
                     listeners: {
                         scope: this,
                         load: function (store, records, successful) {
+                            if (records.length === 10000) {
+                                Rally.ui.notify.Notifier.showWarning({ message: 'Results limited to 10,000 to avoid timeouts' });
+                            }
+
                             if (!successful) {
                                 Rally.ui.notify.Notifier.showError({ message: 'Failed to load data, most likely caused by a server timeout. Try adjusting your scope or filters to reduce the amount of data returned.' });
                             }
@@ -301,7 +398,12 @@ Ext.define('CustomChartApp', {
                 listeners: {
                     scope: this,
                     storesLoaded: function () {
-                        this.down('#grid-area').setLoading(false);
+                        this.down('#chart-area').setLoading(false);
+                    },
+                    snapshotsAggregated: function (chart) {
+                        this._addGrids(chart);
+                        let toggleBtn = this.down('#chartGridToggleBtn');
+                        this.onChartGridToggle(toggleBtn, toggleBtn.toggleState);
                     }
                 }
             };
@@ -316,6 +418,186 @@ Ext.define('CustomChartApp', {
         }
 
         return config;
+    },
+
+    onGridAreaResize: function () {
+        let tabPanel = this.down('#grid-area-tab-panel');
+
+        if (tabPanel && !tabPanel.isHidden()) {
+            if (this.down('#grid-area').isHidden()) {
+                tabPanel.setHeight(this.down('#chart-area').getHeight());
+            }
+            else {
+                tabPanel.setHeight(this.down('#grid-area').getHeight());
+            }
+            this.down('#summaryGrid').setHeight(tabPanel.getHeight() - 25);
+            this.down('#detailedGrid').setHeight(tabPanel.getHeight() - 25);
+        }
+
+        if (this.gridboard && !this.gridboard.isHidden()) {
+            this.gridboard.setHeight(this.down('#chart-area').getHeight());
+        }
+    },
+
+    _addGrids: function (chart) {
+        this.down('#grid-area').removeAll();
+        let store = chart.loadedStores;
+        let aggregationType = this.getSetting('aggregationType');
+        let aggregationTypeField = ChartUtils.getFieldForAggregationType(aggregationType);
+        let aggregationField = this.getSetting('aggregationField');
+        let stackField = this._getStackingSetting();
+        let isFeatureFieldForStory = this._isFeatureFieldForStoryChart();
+        let aggregationDisplayName = isFeatureFieldForStory ? (this.featureModel && this.featureModel.getField(aggregationField) && this.featureModel.getField(aggregationField).displayName) || aggregationField :
+            (this.models[0] && this.models[0].getField(aggregationField) && this.models[0].getField(aggregationField).displayName) || aggregationField;
+        let stackFieldDisplayName = '';
+        if (stackField) {
+            stackFieldDisplayName = (this.models[0] && this.models[0].getField(stackField) && this.models[0].getField(stackField).displayName) || stackField;
+        }
+        let items = [];
+
+        if (chart.chartData) {
+            let data = [];
+            let cols = [];
+
+            if (stackField) {
+                let categories = chart.chartData.categories;
+                cols = [
+                    { text: aggregationDisplayName, dataIndex: 'name', flex: 3 },
+                    { text: stackFieldDisplayName, dataIndex: 'stackField', flex: 3 },
+                    { text: aggregationType === 'count' ? 'Count' : aggregationTypeField, dataIndex: 'value', flex: 1 }
+                ];
+
+                for (let i = 0; i < categories.length; i++) {
+                    let c = categories[i];
+                    let secondaryRows = [];
+
+                    let primaryRow = {
+                        name: c,
+                        stackField: '',
+                        value: 0
+                    }
+
+                    for (let s of chart.chartData.series) {
+                        let val = s.data[i];
+
+                        if (val) {
+                            primaryRow.value += val;
+
+                            secondaryRows.push({
+                                name: '',
+                                stackField: s.name,
+                                value: val
+                            });
+                        }
+                    }
+
+                    data = data.concat([primaryRow].concat(secondaryRows));
+                }
+            }
+            else {
+                let series = (chart.chartData && chart.chartData.series.length && chart.chartData.series[0]) || [];
+
+                cols = [
+                    { text: aggregationDisplayName, dataIndex: 'name', flex: 3 },
+                    { text: aggregationType === 'count' ? 'Count' : aggregationTypeField, dataIndex: 'value', flex: 1 }
+                ];
+
+                data = _.map(series.data, function (r) {
+                    return { name: r[0], value: r[1] };
+                });
+            }
+            let containerWidth = this.down('#grid-area').getWidth() || this.down('#chart-area').getWidth();
+
+            items.push({
+                title: 'Summary',
+                layout: {
+                    type: 'hbox',
+                    pack: 'center'
+                },
+                items: [{
+                    xtype: 'rallygrid',
+                    itemId: 'summaryGrid',
+                    store: Ext.create('Rally.data.custom.Store', {
+                        data: data,
+                        pageSize: data.length
+                    }),
+                    columnCfgs: cols,
+                    sortableColumns: false,
+                    showRowActionsColumn: false,
+                    showPagingToolbar: false,
+                    enableEditing: false,
+                    height: this.down('#grid-area').getHeight() - 20,
+                    width: stackField ? containerWidth > 800 ? 800 : containerWidth : containerWidth > 650 ? 650 : containerWidth,
+                    // flex: 1,
+                    overflowY: 'auto'
+                }]
+            });
+        }
+
+        if (store) {
+            let columns = ['FormattedID', 'Name'];
+
+            if (isFeatureFieldForStory) {
+                columns.push({
+                    text: aggregationDisplayName,
+                    // xtype: 'templatecolumn',
+                    // tpl: `{${aggregationField}}`
+                    dataIndex: 'Feature',
+                    renderer: function (value) {
+                        return CustomAgile.ui.renderer.RecordFieldRendererFactory.getFieldDisplayValue(value, aggregationField, '; ', true)
+                    }
+                });
+            }
+            else {
+                columns.push(aggregationField);
+            }
+
+            if (aggregationType !== 'count') {
+                columns.push(aggregationTypeField);
+            }
+
+            if (stackField) {
+                columns.push(stackField);
+            }
+
+            items.push({
+                title: 'Detailed',
+                items: [{
+                    xtype: 'rallygrid',
+                    itemId: 'detailedGrid',
+                    store: store,
+                    //     Ext.create('Ext.data.Store', {
+                    //     model: this.models[0], // this.getSetting('types') === 'HierarchicalRequirement' && this.getSetting('aggregationLevel') || this.getSetting('types'),
+                    //     data: _.map(store.getRange(), function (r) {
+                    //         if (isFeatureFieldForStory) {
+                    //             r.raw[aggregationField] = r.get('Feature') ? CustomAgile.ui.renderer.RecordFieldRendererFactory.getFieldDisplayValue(r.get('Feature'), aggregationField, '; ', true) || 'None' : 'No Feature';
+                    //         }
+                    //         return r.raw;
+                    //     })
+                    // }),
+                    columnCfgs: columns,
+                    sortableColumns: false, // Sorting the store triggers reloads in the chart and throws errors
+                    showRowActionsColumn: false,
+                    showPagingToolbar: false,
+                    enableEditing: false,
+                    height: this.down('#grid-area').getHeight() - 20,
+                    flex: 1,
+                    overflowY: 'auto'
+                }]
+            });
+        }
+
+        this.grids = this.down('#grid-area').add({
+            xtype: 'tabpanel',
+            itemId: 'grid-area-tab-panel',
+            width: '98%',
+            cls: 'blue-tabs',
+            minTabWidth: 100,
+            height: this.down('#grid-area').getHeight(),
+            plain: true,
+            autoRender: true,
+            items: items,
+        });
     },
 
     onTimeboxScopeChange: function () {
