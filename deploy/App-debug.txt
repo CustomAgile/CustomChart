@@ -3,14 +3,14 @@
 <head>
     <title>CustomChart-1.6.2</title>
     <!--  (c) 2019 Custom Agile.  All Rights Reserved. -->
-    <!--  Build Date: Mon May 11 2020 19:55:16 GMT-0400 (Eastern Daylight Time) -->
-    <!--  Repository: https://github.com/CustomAgile/CustomChart -->
+    <!--  Build Date: Mon May 11 2020 19:55:15 GMT-0400 (Eastern Daylight Time) -->
+
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Mon May 11 2020 19:55:16 GMT-0400 (Eastern Daylight Time)";
-        var CHECKSUM = 2311580353422;
+        var APP_BUILD_DATE = "Mon May 11 2020 19:55:15 GMT-0400 (Eastern Daylight Time)";
+        var CHECKSUM = 2310484336576;
     </script>
 
-    <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
+    <script type="text/javascript" src="/apps/2.1/sdk-debug.js"></script>
 
     <script type="text/javascript">
         Rally.onReady(function() {
@@ -4594,14 +4594,14 @@ Ext.define('CustomChartApp', {
 });
 
 
-               Rally.launchApp('CustomChartApp', {
-                   name: 'CustomChart'
-               });
+            Rally.launchApp('CustomChartApp', {
+                name: 'CustomChart'
+            });
         });
     </script>
 
     <style type="text/css">
-
+        
 .x-border-layout-ct {
     background-color: white;
 }
@@ -4737,5 +4737,7 @@ Ext.define('CustomChartApp', {
     </style>
 
 </head>
+
 <body></body>
+
 </html>

@@ -69,3 +69,8 @@
     display: inline-block;
     speak: none;
 }
+
+.summary-grid-value {
+  color: #337ec6;
+  cursor: pointer;
+}

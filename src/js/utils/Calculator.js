@@ -2,10 +2,10 @@ Ext.define('Calculator', {
 
     config: {
         calculationType: undefined,
-        field: undefined,
+        fieldName: undefined,
         isFeatureFieldForStoryChart: false,
         featureModel: undefined,
-        stackField: undefined,
+        stackFieldName: undefined,
         stackValues: undefined,
         bucketBy: undefined
     },
@@ -19,7 +19,7 @@ Ext.define('Calculator', {
             categories = _.keys(data),
             seriesData;
 
-        if (!this.stackField) {
+        if (!this.stackFieldName) {
             if (this.calculationType === 'count') {
                 seriesData = _.map(data, function (value, key) {
                     return [key, value.length];
@@ -41,42 +41,36 @@ Ext.define('Calculator', {
                 categories: categories,
                 series: [
                     {
-                        name: this.field,
+                        name: this.fieldName,
                         type: this.seriesType,
                         data: seriesData
                     }
                 ]
             };
         } else {
-            var stackField = store.model.getField(this.stackField),
+            var stackField = store.model.getField(this.stackFieldName),
                 stackValues;
 
             if (this.stackValues) {
                 stackValues = _.map(this.stackValues, function (stackValue) {
-                    return this._getDisplayValue(stackField, stackValue);
+                    return CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValue(stackField, stackValue);
                 }, this);
             } else {
-                var values = _.invoke(store.getRange(), 'get', this.stackField);
-                if (this.stackField === 'Iteration' || this.stackField === 'Release') {
-                    values = _.sortBy(values, function (timebox) {
-                        var dateValue = timebox && (timebox.StartDate || timebox.ReleaseStartDate || null);
-                        return new Date(dateValue);
-                    });
-                }
-                stackValues = _.unique(_.map(values, function (value) {
-                    return this._getDisplayValue(stackField, value);
+                stackValues = _.unique(_.map(store.getRange(), function (r) {
+                    return r.get('StackFieldValue');
                 }, this));
             }
 
             var series = {};
             _.each(categories, function (category) {
                 var group = data[category];
-                var recordsByStackValue = _.groupBy(group, function (record) {
-                    return this._getDisplayValueForField(record, this.stackField, false);
+                var recordsByStackValue = _.groupBy(group, function (r) {
+                    return r.get('StackFieldValue');
                 }, this);
                 _.each(stackValues, function (stackValue) {
                     series[stackValue] = series[stackValue] || [];
                     var records = recordsByStackValue[stackValue];
+
                     if (this.calculationType === 'count') {
                         series[stackValue].push((records && records.length) || 0);
                     } else {
@@ -112,7 +106,7 @@ Ext.define('Calculator', {
 
         if (fieldType === 'collection') {
             _.each(store.getRange(), function (record) {
-                var value = this.isFeatureFieldForStoryChart ? record.get('Feature') && record.get('Feature')[this.field] || {} : record.get(this.field);
+                var value = this.isFeatureFieldForStoryChart ? record.get('Feature') && record.get('Feature')[this.fieldName] || {} : record.get(this.fieldName);
                 var values = value._tagsNameArray;
                 if (_.isEmpty(values)) {
                     groups.None = groups.None || [];
@@ -127,11 +121,14 @@ Ext.define('Calculator', {
             return groups;
         } else {
             groups = _.groupBy(store.getRange(), function (record) {
-                return this._getDisplayValueForField(record, this.field, true);
+                if (this.isFeatureFieldForStoryChart && !record.get('Feature')) {
+                    return 'No Feature';
+                }
+                return record.get('AggregationFieldValue');
             }, this);
             if (fieldType === 'date') {
                 var dates = _.sortBy(_.compact(_.map(store.getRange(), function (record) {
-                    return this.isFeatureFieldForStoryChart ? record.get('Feature') && record.get('Feature')[this.field] && Rally.util.DateTime.fromIsoString(record.get('Feature')[this.field]) : record.get(this.field);
+                    return this.isFeatureFieldForStoryChart ? record.get('Feature') && record.get('Feature')[this.fieldName] && Rally.util.DateTime.fromIsoString(record.get('Feature')[this.fieldName]) : record.get(this.fieldName);
                 }, this)));
                 var datesNoGaps = this._getDateRange(dates[0], dates[dates.length - 1]);
                 var allGroups = {};
@@ -139,7 +136,7 @@ Ext.define('Calculator', {
                     allGroups['-- No Entry --'] = groups['-- No Entry --'];
                 }
                 groups = _.reduce(datesNoGaps, function (accum, val) {
-                    var group = this._getDisplayValue(field, moment(val).toDate());
+                    var group = CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValue(field, moment(val).toDate());
                     accum[group] = groups[group] || [];
                     return accum;
                 }, allGroups, this);
@@ -172,61 +169,12 @@ Ext.define('Calculator', {
         return datesNoGaps;
     },
 
-    _getDisplayValueForField: function (record, fieldName, isGrouping) {
-        if (this.isFeatureFieldForStoryChart && isGrouping && !record.get('Feature')) {
-            return 'No Feature';
-        }
-
-        var field = this.isFeatureFieldForStoryChart && isGrouping ? this.featureModel && this.featureModel.getField(fieldName) : record.getField(fieldName),
-            value = this.isFeatureFieldForStoryChart && isGrouping ? record.get('Feature')[fieldName] : record.get(fieldName);
-
-        if (field.getType() === 'date' && value && typeof value === 'string') {
-            value = Rally.util.DateTime.fromIsoString(value);
-        }
-
-        return this._getDisplayValue(field, value);
-    },
-
-    _getDisplayValue: function (field, value) {
-        if (!field) {
-            return 'Field not groupable';
-        } else if (_.isDate(value)) {
-            if (!this.bucketBy || this.bucketBy === 'day') {
-                return Rally.util.DateTime.formatWithDefault(value);
-            } else if (this.bucketBy === 'week') {
-                return Rally.util.DateTime.formatWithDefault(moment(value).startOf('week').toDate());
-            } else if (this.bucketBy === 'month') {
-                return moment(value).startOf('month').format('MMM \'YY');
-            } else if (this.bucketBy === 'quarter') {
-                return moment(value).startOf('quarter').format('YYYY [Q]Q');
-            } else if (this.bucketBy === 'year') {
-                return moment(value).startOf('year').format('YYYY');
-            }
-        } else if (_.isObject(value)) {
-            return value._refObjectName || value._ref;
-        } else if (Ext.isEmpty(value)) {
-            var fieldType = field.getType();
-            if (field.attributeDefinition.SchemaType === 'User') {
-                return '-- No Owner --';
-            } else if (fieldType === 'rating' || fieldType === 'object') {
-                return 'None';
-            } else {
-                return '-- No Entry --';
-            }
-        } else if (field.name === 'DisplayColor') {
-            let color = CustomAgile.ui.renderer.RecordFieldRendererFactory.colorPalette[value];
-            return color ? color : value;
-        } else {
-            return value;
-        }
-    },
-
     _getField: function (store) {
         if (this.isFeatureFieldForStoryChart) {
-            return this.featureModel && this.featureModel.getField(this.field);
+            return this.featureModel && this.featureModel.getField(this.fieldName);
         }
         else {
-            return store.model.getField(this.field)
+            return store.model.getField(this.fieldName)
         }
     },
 
