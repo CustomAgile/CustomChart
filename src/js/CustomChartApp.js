@@ -76,8 +76,6 @@ Ext.define('CustomChartApp', {
             this.fireEvent('appsettingsneeded'); //todo: does this work?
         }
         else {
-            this.addExportBtn();
-
             this.down('#grid-area').on('resize', this.onGridAreaResize, this);
             this.down('#filter-area').on('resize', this.onGridAreaResize, this);
 
@@ -106,8 +104,12 @@ Ext.define('CustomChartApp', {
                                     select: this._addChart,
                                     change: this._addChart
                                 });
-                                this.addToggleBtn();
-                                this.addFieldPickerBtn();
+                                this.addButtons();
+
+                                if (this.down('#chart-area').getHeight() < 260) {
+                                    this.down('#grid-area').setHeight((this.down('#grid-area').getHeight() + this.down('#chart-area').getHeight()) / 2)
+                                }
+
                                 this._addChart();
                             }
                         });
@@ -118,8 +120,32 @@ Ext.define('CustomChartApp', {
         }
     },
 
-    addExportBtn: function () {
-        this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).add({
+    addButtons: function () {
+        let renderArea = this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID);
+        let buttonArea = renderArea;
+        let margins = '0 10 0 0';
+        if (renderArea.getWidth() < 670 && this.ancestorFilterPlugin._showIgnoreProjectScopeControl()) {
+            buttonArea = Ext.widget('container', {
+                id: 'extended-button-area',
+                margin: '5 0 4 0',
+                layout: {
+                    type: 'hbox',
+                    pack: 'start',
+                }
+            });
+            margins = '0 0 0 20';
+            this.down('#filter-area').insert(1, buttonArea);
+            if (this.down('multifiltertogglebtn')) {
+                buttonArea.insert(0, this.down('multifiltertogglebtn'));
+            }
+        }
+        this.addToggleBtn(buttonArea, margins);
+        this.addFieldPickerBtn(buttonArea, margins);
+        this.addExportBtn(buttonArea, margins);
+    },
+
+    addExportBtn: function (buttonArea, margins) {
+        buttonArea.add({
             xtype: 'rallybutton',
             id: 'exportReportBtn',
             iconCls: 'icon-export',
@@ -130,6 +156,7 @@ Ext.define('CustomChartApp', {
                 anchor: 'top',
                 hideDelay: 0
             },
+            margin: margins,
             handler: (btn) => {
                 let menu = Ext.widget({
                     xtype: 'rallymenu',
@@ -149,7 +176,7 @@ Ext.define('CustomChartApp', {
         });
     },
 
-    addFieldPickerBtn: function () {
+    addFieldPickerBtn: function (buttonArea, margins) {
         let modelName = this.models[0].typePath;
         let context = this.getContext();
         let alwaysSelectedValues = [];
@@ -169,9 +196,9 @@ Ext.define('CustomChartApp', {
             alwaysSelectedValues.push(stackField);
         }
 
-        this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).add({
+        buttonArea.add({
             xtype: 'tsfieldpickerbutton',
-            margin: '0 10 5 0',
+            margin: margins,
             toolTipConfig: {
                 html: 'Additional Columns for Grid & Export',
                 anchor: 'top'
@@ -203,12 +230,12 @@ Ext.define('CustomChartApp', {
         return result;
     },
 
-    addToggleBtn: function () {
-        this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).add({
+    addToggleBtn: function (buttonArea, margins) {
+        buttonArea.add({
             xtype: 'chartgridtogglebtn',
             itemId: 'chartGridToggleBtn',
             toggleState: 'chart',
-            margin: '0 30 0 30',
+            margin: margins,
             stateId: this.getContext().getScopedStateId('customchart-toggle-btn'),
             listeners: {
                 scope: this,
@@ -778,6 +805,7 @@ Ext.define('CustomChartApp', {
                 ],
                 models: this.models,
                 data: data,
+                maxWidth: this.down('#grid-area').getWidth(),
                 columns: this.getDetailedGridColumns()
             });
 

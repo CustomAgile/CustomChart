@@ -2,11 +2,6 @@
     background-color: white;
 }
 
-#exportReportBtn { 
-  left: auto !important;
-  right: 70px !important;
-}
-
 .x-splitter {
   background-color: #f6f6f6;
   border-bottom: 1px solid;
