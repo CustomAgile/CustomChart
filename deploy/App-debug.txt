@@ -3,11 +3,11 @@
 <head>
     <title>CustomChart-1.6.3</title>
     <!--  (c) 2019 Custom Agile.  All Rights Reserved. -->
-    <!--  Build Date: Tue May 19 2020 12:24:07 GMT-0400 (Eastern Daylight Time) -->
+    <!--  Build Date: Tue May 19 2020 19:49:18 GMT-0400 (Eastern Daylight Time) -->
 
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue May 19 2020 12:24:07 GMT-0400 (Eastern Daylight Time)";
-        var CHECKSUM = 2353853606840;
+        var APP_BUILD_DATE = "Tue May 19 2020 19:49:18 GMT-0400 (Eastern Daylight Time)";
+        var CHECKSUM = 2354409698057;
     </script>
 
     <script type="text/javascript" src="/apps/2.1/sdk-debug.js"></script>
@@ -281,7 +281,7 @@ multiFilterHelpHtml = `
         `;
 Ext.define('Utils.AncestorPiAppFilter', {
     alias: 'plugin.UtilsAncestorPiAppFilter',
-    version: "1.2.12",
+    version: "1.2.15",
     mixins: [
         'Ext.AbstractPlugin',
         'Rally.Messageable'
@@ -522,6 +522,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
         let prefName = 'multi-level-filter-whitelist-fields-preference-' + this.cmp.getContext().getWorkspaceRef();
         if (this.overrideGlobalWhitelist) {
             def.resolve(this.whiteListFields);
+            return def.promise;
         }
 
         Rally.data.PreferenceManager.load({
@@ -1259,8 +1260,8 @@ Ext.define('Utils.AncestorPiAppFilter', {
                 this.showFiltersBtn.hide();
             }
 
-            if (this.renderArea.down('#filterHelpBtn')) {
-                this.renderArea.down('#filterHelpBtn').hide();
+            if (this.filterHelpBtn) {
+                this.filterHelpBtn.hide();
             }
 
             if (!this.publishedValue.filters) {
@@ -1289,6 +1290,18 @@ Ext.define('Utils.AncestorPiAppFilter', {
     _onChange: function () {
         if (this.ready) {
             this.fireEvent('change', this.getMultiLevelFilters());
+        }
+    },
+
+    hideHelpButton: function () {
+        if (this.filterHelpBtn) {
+            this.filterHelpBtn.hide();
+        }
+    },
+
+    showHelpButton: function () {
+        if (this.filterHelpBtn) {
+            this.filterHelpBtn.show();
         }
     },
 
@@ -1506,9 +1519,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
             // Without this, the components are clipped on narrow windows
             this.renderArea.setOverflowXY('auto', 'auto');
             this.renderArea.add(controls);
-            // this.renderArea.add({
-            let helpBtn = Ext.widget('rallybutton', {
-                //  xtype: 'rallybutton',
+            this.filterHelpBtn = Ext.widget('rallybutton', {
                 itemId: 'filterHelpBtn',
                 floating: true,
                 shadow: false,
@@ -1518,7 +1529,7 @@ Ext.define('Utils.AncestorPiAppFilter', {
                 hidden: this._isSubscriber() || !this._showMultiLevelFilter(),
                 handler: (...args) => this.onHelpClicked(...args)
             });
-            helpBtn.showBy(this.renderArea, 'tr-tr', [0, 7]);
+            this.filterHelpBtn.showBy(this.renderArea, 'tr-tr', [0, 7]);
         }
 
         this._addTooltips();
@@ -3773,6 +3784,7 @@ Ext.define('CustomChartApp', {
                 pluginId: 'ancestorFilterPlugin',
                 settingsConfig: {},
                 filtersHidden: false,
+                overrideGlobalWhitelist: true,
                 whiteListFields: ['Milestones', 'Tags', 'c_EnterpriseApprovalEA', 'c_EAEpic', 'DisplayColor'],
                 visibleTab: this.getSetting('types'),
                 listeners: {
@@ -4693,11 +4705,6 @@ Ext.define('CustomChartApp', {
     background-color: white;
 }
 
-/* #exportReportBtn { 
-  left: auto !important;
-  right: 70px !important;
-} */
-
 .x-splitter {
   background-color: #f6f6f6;
   border-bottom: 1px solid;
@@ -4797,10 +4804,7 @@ Ext.define('CustomChartApp', {
 }
 
 .filter-help { 
-  left: auto !important;
-  margin-top: 0;
   border-color: #d6d6d6 !important;
-  right: 10px !important;
 }
 
 .icon-help {
