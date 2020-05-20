@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CustomChart-1.6.4</title>
+    <title>CustomChart-1.6.3</title>
     <!--  (c) 2019 Custom Agile.  All Rights Reserved. -->
-    <!--  Build Date: Wed May 20 2020 11:30:19 GMT-0400 (Eastern Daylight Time) -->
+    <!--  Build Date: Tue May 19 2020 20:05:39 GMT-0400 (Eastern Daylight Time) -->
     <!--  Repository: https://github.com/CustomAgile/CustomChart -->
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed May 20 2020 11:30:19 GMT-0400 (Eastern Daylight Time)";
-        var CHECKSUM = 2355516015039;
+        var APP_BUILD_DATE = "Tue May 19 2020 20:05:39 GMT-0400 (Eastern Daylight Time)";
+        var CHECKSUM = 2355580217365;
     </script>
 
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -3784,8 +3784,8 @@ Ext.define('CustomChartApp', {
                 pluginId: 'ancestorFilterPlugin',
                 settingsConfig: {},
                 filtersHidden: false,
-                overrideGlobalWhitelist: true,
-                whiteListFields: ['Milestones', 'Tags', 'c_EnterpriseApprovalEA', 'c_EAEpic', 'DisplayColor'],
+                // overrideGlobalWhitelist: false,
+                // whiteListFields: ['Milestones', 'Tags', 'c_EnterpriseApprovalEA', 'c_EAEpic', 'DisplayColor'],
                 visibleTab: this.getSetting('types'),
                 listeners: {
                     scope: this,
@@ -3825,7 +3825,7 @@ Ext.define('CustomChartApp', {
         let renderArea = this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID);
         let buttonArea = renderArea;
         let margins = '0 10 0 0';
-        if (renderArea.getWidth() < 740 && this.ancestorFilterPlugin._showIgnoreProjectScopeControl()) {
+        if (renderArea.getWidth() < 670 && this.ancestorFilterPlugin._showIgnoreProjectScopeControl()) {
             buttonArea = Ext.widget('container', {
                 id: 'extended-button-area',
                 margin: '5 0 4 0',

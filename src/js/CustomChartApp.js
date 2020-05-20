@@ -125,7 +125,7 @@ Ext.define('CustomChartApp', {
         let renderArea = this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID);
         let buttonArea = renderArea;
         let margins = '0 10 0 0';
-        if (renderArea.getWidth() < 670 && this.ancestorFilterPlugin._showIgnoreProjectScopeControl()) {
+        if (renderArea.getWidth() < 740 && this.ancestorFilterPlugin._showIgnoreProjectScopeControl()) {
             buttonArea = Ext.widget('container', {
                 id: 'extended-button-area',
                 margin: '5 0 4 0',
