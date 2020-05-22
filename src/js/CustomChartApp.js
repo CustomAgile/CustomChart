@@ -383,6 +383,7 @@ Ext.define('CustomChartApp', {
         this.stackFieldName = this._getStackingSetting();
         this.stackField = this.stackFieldName && this.models[0] && this.models[0].getField(this.stackFieldName);
         this.stackFieldDisplayName = this.stackFieldName ? ((this.stackField && this.stackField.displayName) || this.stackFieldName) : '';
+        this.bucketBy = this.getSetting('bucketBy');
     },
 
     _cancelPreviousLoad: function (newStatus) {
@@ -467,11 +468,11 @@ Ext.define('CustomChartApp', {
                                     r.set('AggregationFieldValue', 'No Feature');
                                 }
                                 else {
-                                    r.set('AggregationFieldValue', CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValueForField(rec, this.aggregationFieldName, this.aggregationField));
+                                    r.set('AggregationFieldValue', CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValueForField(rec, this.aggregationFieldName, this.aggregationField, this.bucketBy));
                                 }
 
                                 if (this.stackField) {
-                                    r.set('StackFieldValue', CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValueForField(r, this.stackFieldName, this.stackField));
+                                    r.set('StackFieldValue', CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValueForField(r, this.stackFieldName, this.stackField, this.bucketBy));
                                 }
                             }
 
@@ -616,7 +617,7 @@ Ext.define('CustomChartApp', {
                             }]);
                         },
                         renderer: function (value, metaData, record) {
-                            return `<a onclick="Rally.getApp()._getOnClick(event,'${record.get('name').replace(/"/g, '')}','${record.get('stackField').replace(/"/g, '')}'); return false;">
+                            return `<a onclick="Rally.getApp()._getOnClick(event,'${record.get('name').replace(/"/g, '\\"').replace(/'/g, "\\'")}','${record.get('stackField').replace(/"/g, '\\"').replace(/'/g, "\\'")}'); return false;">
                                         <span class="summary-grid-value">${value}</span>
                                     </a>`;
                         },
@@ -674,7 +675,7 @@ Ext.define('CustomChartApp', {
                         dataIndex: 'value',
                         flex: 1,
                         renderer: function (value, metaData, record) {
-                            return `<a onclick="Rally.getApp()._getOnClick(event,'${record.get('name').replace(/"/g, '')}',''); return false;">
+                            return `<a onclick="Rally.getApp()._getOnClick(event,'${record.get('name').replace(/"/g, '\\"').replace(/'/g, "\\'")}',''); return false;">
                                         <span class="summary-grid-value">${value}</span>
                                     </a>`;
                         },
@@ -789,10 +790,10 @@ Ext.define('CustomChartApp', {
         if (this.records) {
             let data = _.filter(this.records, function (r) {
                 if (stackFieldNameVal) {
-                    return stackFieldNameVal === r.get('StackFieldValue').replace(/"/g, '') && fieldNameVal === r.get('AggregationFieldValue').replace(/"/g, '');
+                    return stackFieldNameVal === r.get('StackFieldValue') && fieldNameVal === r.get('AggregationFieldValue');
                 }
 
-                return fieldNameVal === r.get('AggregationFieldValue').replace(/"/g, '');
+                return fieldNameVal === r.get('AggregationFieldValue');
             }, this);
 
             Ext.create(CustomAgile.ui.popover.SummaryGridPopover, {

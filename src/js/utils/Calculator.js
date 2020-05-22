@@ -53,7 +53,7 @@ Ext.define('Calculator', {
 
             if (this.stackValues) {
                 stackValues = _.map(this.stackValues, function (stackValue) {
-                    return CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValue(stackField, stackValue);
+                    return CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValue(stackField, stackValue, this.bucketBy);
                 }, this);
             } else {
                 stackValues = _.unique(_.map(store.getRange(), function (r) {
@@ -136,7 +136,7 @@ Ext.define('Calculator', {
                     allGroups['-- No Entry --'] = groups['-- No Entry --'];
                 }
                 groups = _.reduce(datesNoGaps, function (accum, val) {
-                    var group = CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValue(field, moment(val).toDate());
+                    var group = CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValue(field, moment(val).toDate(), this.bucketBy);
                     accum[group] = groups[group] || [];
                     return accum;
                 }, allGroups, this);

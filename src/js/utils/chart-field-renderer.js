@@ -4,28 +4,28 @@
 Ext.define('CustomAgile.ui.renderer.ChartFieldRenderer', {
     singleton: true,
 
-    getDisplayValueForField: function (record, fieldName, field) {
+    getDisplayValueForField: function (record, fieldName, field, bucketBy) {
         let val = record.get ? record.get(fieldName) : record[fieldName];
 
         if (_.isDate(val) || Ext.isEmpty(val, false)) {
-            return this.getDisplayValue(field, val);
+            return this.getDisplayValue(field, val, bucketBy);
         }
         return CustomAgile.ui.renderer.RecordFieldRendererFactory.getFieldDisplayValue(record, fieldName, '; ', false) || 'None';
     },
 
-    getDisplayValue: function (field, value) {
+    getDisplayValue: function (field, value, bucketBy) {
         if (!field) {
             return 'Field not groupable';
         } else if (_.isDate(value)) {
-            if (!this.bucketBy || this.bucketBy === 'day') {
+            if (!bucketBy || bucketBy === 'day') {
                 return Rally.util.DateTime.formatWithDefault(value);
-            } else if (this.bucketBy === 'week') {
+            } else if (bucketBy === 'week') {
                 return Rally.util.DateTime.formatWithDefault(moment(value).startOf('week').toDate());
-            } else if (this.bucketBy === 'month') {
+            } else if (bucketBy === 'month') {
                 return moment(value).startOf('month').format('MMM \'YY');
-            } else if (this.bucketBy === 'quarter') {
+            } else if (bucketBy === 'quarter') {
                 return moment(value).startOf('quarter').format('YYYY [Q]Q');
-            } else if (this.bucketBy === 'year') {
+            } else if (bucketBy === 'year') {
                 return moment(value).startOf('year').format('YYYY');
             }
         } else if (_.isObject(value)) {

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CustomChart-1.6.4</title>
+    <title>CustomChart-1.6.5</title>
     <!--  (c) 2019 Custom Agile.  All Rights Reserved. -->
-    <!--  Build Date: Wed May 20 2020 11:30:19 GMT-0400 (Eastern Daylight Time) -->
+    <!--  Build Date: Thu May 21 2020 20:36:55 GMT-0400 (Eastern Daylight Time) -->
     <!--  Repository: https://github.com/CustomAgile/CustomChart -->
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed May 20 2020 11:30:19 GMT-0400 (Eastern Daylight Time)";
-        var CHECKSUM = 2355516015039;
+        var APP_BUILD_DATE = "Thu May 21 2020 20:36:55 GMT-0400 (Eastern Daylight Time)";
+        var CHECKSUM = 2357855109887;
     </script>
 
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -2421,28 +2421,28 @@ Ext.define('CustomAgile.ui.renderer.RecordFieldRendererFactory', {
 Ext.define('CustomAgile.ui.renderer.ChartFieldRenderer', {
     singleton: true,
 
-    getDisplayValueForField: function (record, fieldName, field) {
+    getDisplayValueForField: function (record, fieldName, field, bucketBy) {
         let val = record.get ? record.get(fieldName) : record[fieldName];
 
         if (_.isDate(val) || Ext.isEmpty(val, false)) {
-            return this.getDisplayValue(field, val);
+            return this.getDisplayValue(field, val, bucketBy);
         }
         return CustomAgile.ui.renderer.RecordFieldRendererFactory.getFieldDisplayValue(record, fieldName, '; ', false) || 'None';
     },
 
-    getDisplayValue: function (field, value) {
+    getDisplayValue: function (field, value, bucketBy) {
         if (!field) {
             return 'Field not groupable';
         } else if (_.isDate(value)) {
-            if (!this.bucketBy || this.bucketBy === 'day') {
+            if (!bucketBy || bucketBy === 'day') {
                 return Rally.util.DateTime.formatWithDefault(value);
-            } else if (this.bucketBy === 'week') {
+            } else if (bucketBy === 'week') {
                 return Rally.util.DateTime.formatWithDefault(moment(value).startOf('week').toDate());
-            } else if (this.bucketBy === 'month') {
+            } else if (bucketBy === 'month') {
                 return moment(value).startOf('month').format('MMM \'YY');
-            } else if (this.bucketBy === 'quarter') {
+            } else if (bucketBy === 'quarter') {
                 return moment(value).startOf('quarter').format('YYYY [Q]Q');
-            } else if (this.bucketBy === 'year') {
+            } else if (bucketBy === 'year') {
                 return moment(value).startOf('year').format('YYYY');
             }
         } else if (_.isObject(value)) {
@@ -3033,7 +3033,7 @@ Ext.define('Calculator', {
 
             if (this.stackValues) {
                 stackValues = _.map(this.stackValues, function (stackValue) {
-                    return CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValue(stackField, stackValue);
+                    return CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValue(stackField, stackValue, this.bucketBy);
                 }, this);
             } else {
                 stackValues = _.unique(_.map(store.getRange(), function (r) {
@@ -3116,7 +3116,7 @@ Ext.define('Calculator', {
                     allGroups['-- No Entry --'] = groups['-- No Entry --'];
                 }
                 groups = _.reduce(datesNoGaps, function (accum, val) {
-                    var group = CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValue(field, moment(val).toDate());
+                    var group = CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValue(field, moment(val).toDate(), this.bucketBy);
                     accum[group] = groups[group] || [];
                     return accum;
                 }, allGroups, this);
@@ -4083,6 +4083,7 @@ Ext.define('CustomChartApp', {
         this.stackFieldName = this._getStackingSetting();
         this.stackField = this.stackFieldName && this.models[0] && this.models[0].getField(this.stackFieldName);
         this.stackFieldDisplayName = this.stackFieldName ? ((this.stackField && this.stackField.displayName) || this.stackFieldName) : '';
+        this.bucketBy = this.getSetting('bucketBy');
     },
 
     _cancelPreviousLoad: function (newStatus) {
@@ -4167,11 +4168,11 @@ Ext.define('CustomChartApp', {
                                     r.set('AggregationFieldValue', 'No Feature');
                                 }
                                 else {
-                                    r.set('AggregationFieldValue', CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValueForField(rec, this.aggregationFieldName, this.aggregationField));
+                                    r.set('AggregationFieldValue', CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValueForField(rec, this.aggregationFieldName, this.aggregationField, this.bucketBy));
                                 }
 
                                 if (this.stackField) {
-                                    r.set('StackFieldValue', CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValueForField(r, this.stackFieldName, this.stackField));
+                                    r.set('StackFieldValue', CustomAgile.ui.renderer.ChartFieldRenderer.getDisplayValueForField(r, this.stackFieldName, this.stackField, this.bucketBy));
                                 }
                             }
 
@@ -4316,7 +4317,7 @@ Ext.define('CustomChartApp', {
                             }]);
                         },
                         renderer: function (value, metaData, record) {
-                            return `<a onclick="Rally.getApp()._getOnClick(event,'${record.get('name').replace(/"/g, '')}','${record.get('stackField').replace(/"/g, '')}'); return false;">
+                            return `<a onclick="Rally.getApp()._getOnClick(event,'${record.get('name').replace(/"/g, '\\"').replace(/'/g, "\\'")}','${record.get('stackField').replace(/"/g, '\\"').replace(/'/g, "\\'")}'); return false;">
                                         <span class="summary-grid-value">${value}</span>
                                     </a>`;
                         },
@@ -4374,7 +4375,7 @@ Ext.define('CustomChartApp', {
                         dataIndex: 'value',
                         flex: 1,
                         renderer: function (value, metaData, record) {
-                            return `<a onclick="Rally.getApp()._getOnClick(event,'${record.get('name').replace(/"/g, '')}',''); return false;">
+                            return `<a onclick="Rally.getApp()._getOnClick(event,'${record.get('name').replace(/"/g, '\\"').replace(/'/g, "\\'")}',''); return false;">
                                         <span class="summary-grid-value">${value}</span>
                                     </a>`;
                         },
@@ -4489,10 +4490,10 @@ Ext.define('CustomChartApp', {
         if (this.records) {
             let data = _.filter(this.records, function (r) {
                 if (stackFieldNameVal) {
-                    return stackFieldNameVal === r.get('StackFieldValue').replace(/"/g, '') && fieldNameVal === r.get('AggregationFieldValue').replace(/"/g, '');
+                    return stackFieldNameVal === r.get('StackFieldValue') && fieldNameVal === r.get('AggregationFieldValue');
                 }
 
-                return fieldNameVal === r.get('AggregationFieldValue').replace(/"/g, '');
+                return fieldNameVal === r.get('AggregationFieldValue');
             }, this);
 
             Ext.create(CustomAgile.ui.popover.SummaryGridPopover, {
