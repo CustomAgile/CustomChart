@@ -82,10 +82,6 @@ Ext.define('CustomChartApp', {
             this.ancestorFilterPlugin = Ext.create('Utils.AncestorPiAppFilter', {
                 ptype: 'UtilsAncestorPiAppFilter',
                 pluginId: 'ancestorFilterPlugin',
-                settingsConfig: {},
-                filtersHidden: false,
-                overrideGlobalWhitelist: true,
-                whiteListFields: ['Milestones', 'Tags', 'c_EnterpriseApprovalEA', 'c_EAEpic', 'DisplayColor'],
                 visibleTab: this.getSetting('types'),
                 listeners: {
                     scope: this,
