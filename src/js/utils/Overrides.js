@@ -106,3 +106,41 @@ Ext.override(Rally.ui.picker.FieldPicker, {
         return data;
     }
 });
+
+Ext.override(Rally.ui.dialog.SharedViewDialog, {
+    /* 
+        Dialog and Combobox weren't refreshing after adding a new shared
+        view, so here we are 
+    */
+    _onCreate: function (dialog, record) {
+        if (this.grid) {
+            this.grid.getStore().reload();
+        }
+        let newPrefRef = record.get('_ref');
+        let combobox = Rally.getApp().down('#customChartSharedViewCombobox');
+
+        if (newPrefRef && combobox) {
+            combobox.getStore().reload();
+            combobox.setValue(newPrefRef);
+            combobox.saveState();
+        }
+
+        this.down('#doneButton').focus();
+    },
+});
+
+
+
+// Ext.override(Rally.ui.inlinefilter.InlineFilterControl, {
+//     /* 
+//         Dialog and Combobox weren't refreshing after adding a new shared
+//         view, so here we are 
+//     */
+
+
+//     _onFilterChange: function () {
+//         var app = Rally.getApp();
+//         app.settingView = false;
+//         this.callParent(arguments);
+//     }
+// });

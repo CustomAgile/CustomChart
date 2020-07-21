@@ -72,6 +72,8 @@ Ext.define('CustomChartApp', {
     launch: function () {
         Rally.data.wsapi.Proxy.superclass.timeout = 240000;
 
+        this.settingView = true;
+
         if (!this.getSetting('types')) {
             this.fireEvent('appsettingsneeded'); //todo: does this work?
         }
@@ -95,17 +97,18 @@ Ext.define('CustomChartApp', {
                             scope: this
                         }).then({
                             scope: this,
-                            success: function () {
+                            success: async function () {
                                 plugin.addListener({
                                     scope: this,
-                                    select: this._addChart,
-                                    change: this._addChart
+                                    select: this.viewChange,
+                                    change: this.viewChange
                                 });
                                 this.addButtons();
 
                                 if (this.down('#chart-area').getHeight() < 260) {
-                                    this.down('#grid-area').setHeight((this.down('#grid-area').getHeight() + this.down('#chart-area').getHeight()) / 2)
+                                    this.down('#grid-area').setHeight((this.down('#grid-area').getHeight() + this.down('#chart-area').getHeight()) / 2);
                                 }
+                                await this._addSharedViewsCombo();
 
                                 this._addChart();
                             }
@@ -139,6 +142,7 @@ Ext.define('CustomChartApp', {
         this.addToggleBtn(buttonArea, margins);
         this.addFieldPickerBtn(buttonArea, margins);
         this.addExportBtn(buttonArea, margins);
+
     },
 
     addExportBtn: function (buttonArea, margins) {
@@ -216,6 +220,28 @@ Ext.define('CustomChartApp', {
                 scope: this
             }
         });
+    },
+
+    _addSharedViewsCombo: function () {
+        return new Promise(function (resolve) {
+            var compCount = this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).items.length;
+            this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).insert(compCount - 1, [
+                {
+                    xtype: 'rallysharedviewcombobox',
+                    title: 'Shared Views',
+                    itemId: 'customChartSharedViewCombobox',
+                    enableUrlSharing: true,
+                    context: this.getContext(),
+                    cmp: this,
+                    listeners: {
+                        ready: function (combo) {
+                            combo.setValue(null);
+                            resolve();
+                        }
+                    }
+                }
+            ]);
+        }.bind(this));
     },
 
     getFieldsFromButton: function () {
@@ -328,6 +354,8 @@ Ext.define('CustomChartApp', {
         var chartArea = this.down('#chart-area');
         chartArea.removeAll();
         this.down('#grid-area').removeAll();
+
+
         chartArea.setLoading(true);
 
         var context = this.getContext();
@@ -360,11 +388,27 @@ Ext.define('CustomChartApp', {
                     filters: filters,
                     context: dataContext,
                     enablePostGet: true
+                },
+                listeners: {
+                    viewchange: this.viewChange,
+                    scope: this
                 }
             };
 
             this.gridboard = chartArea.add(gridBoardConfig);
         });
+    },
+
+    viewChange() {
+        if (this.settingView) {
+            return;
+        }
+        if (!this.dontResetSharedViewCombo && this.down('#customChartSharedViewCombobox')) {
+            this.down('#customChartSharedViewCombobox').setValue(null);
+        }
+        this.dontResetSharedViewCombo = false;
+        //this._clearSharedViewCombo();
+        this._addChart();
     },
 
     setChartVariables: function () {
@@ -987,4 +1031,45 @@ Ext.define('CustomChartApp', {
         }
         return defaultMessage;
     },
+
+    getCurrentView: function () {
+        let ancestorData = Rally.getApp().ancestorFilterPlugin._getValue();
+
+        // Delete piRecord to avoid recursive stack overflow error
+        delete ancestorData.piRecord;
+
+        let gridView = this.gridboard.getCurrentView();
+        // Getting State for Custom Field Picker
+        var fieldPicker = this.down('tsfieldpickerbutton')
+        let views = Ext.apply(fieldPicker.getState(), gridView, ancestorData);
+
+        // Getting State for Chart Toggle Button
+        views.chartToggleState = this.down('#chartGridToggleBtn').getState();
+        return views;
+    },
+
+    setCurrentView: function (view) {
+        var app = Rally.getApp();
+        app.settingView = true;
+        if (app.ancestorFilterPlugin) {
+            if (view.filterStates) {
+                app.ancestorFilterPlugin.mergeLegacyFilter(view.filterStates, view, app.models[0].typePath);
+            }
+            app.ancestorFilterPlugin.setCurrentView(view);
+        }
+
+        // Setting State for Chart Toggle Button
+        this.down('#chartGridToggleBtn').applyState(view.chartToggleState);
+        // Setting State for Custom Field Picker
+        this.down('tsfieldpickerbutton').applyState(view)
+
+        setTimeout(async function () {
+            // Ext.resumeLayouts(true);   
+            app.settingView = false;
+            app.dontResetSharedViewCombo = true;
+            app.viewChange();
+        }.bind(this), 2000);
+    }
+
+
 });

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CustomChart-1.6.6</title>
+    <title>CustomChart-1.6.7</title>
     <!--  (c) 2019 Custom Agile.  All Rights Reserved. -->
-    <!--  Build Date: Wed Jun 17 2020 16:50:48 GMT-0400 (Eastern Daylight Time) -->
+    <!--  Build Date: Mon Jul 20 2020 18:14:15 GMT-0700 (Mountain Standard Time) -->
     <!--  Repository: https://github.com/CustomAgile/CustomChart -->
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Jun 17 2020 16:50:48 GMT-0400 (Eastern Daylight Time)";
-        var CHECKSUM = 820811282715;
+        var APP_BUILD_DATE = "Mon Jul 20 2020 18:14:15 GMT-0700 (Mountain Standard Time)";
+        var CHECKSUM = 857725470803;
     </script>
 
     <script type="text/javascript" src="/apps/2.1/sdk.js"></script>
@@ -123,6 +123,45 @@ Ext.override(Rally.ui.picker.FieldPicker, {
         return data;
     }
 });
+
+Ext.override(Rally.ui.dialog.SharedViewDialog, {
+    /* 
+        Dialog and Combobox weren't refreshing after adding a new shared
+        view, so here we are 
+    */
+    _onCreate: function (dialog, record) {
+        if (this.grid) {
+            this.grid.getStore().reload();
+        }
+        let newPrefRef = record.get('_ref');
+        let combobox = Rally.getApp().down('#customChartSharedViewCombobox');
+
+        if (newPrefRef && combobox) {
+            combobox.getStore().reload();
+            combobox.setValue(newPrefRef);
+            combobox.saveState();
+        }
+
+        this.down('#doneButton').focus();
+    },
+});
+
+
+
+// Ext.override(Rally.ui.inlinefilter.InlineFilterControl, {
+//     /* 
+//         Dialog and Combobox weren't refreshing after adding a new shared
+//         view, so here we are 
+//     */
+
+
+//     _onFilterChange: function () {
+//         var app = Rally.getApp();
+//         app.settingView = false;
+//         this.callParent(arguments);
+//     }
+// });
+
 /**
  * Overrides to allow a store load to the canceled which will abort loading
  * any subsequent pages and not invoke the load callback.
@@ -3035,7 +3074,7 @@ Ext.define('CA.technicalservices.userutilities.FieldPicker', {
 
     cls: 'field-picker-btn secondary rly-small',
 
-    alwaysSelectedValues: ['FormattedID', 'Name'],
+    alwaysSelectedValues: ['FormattedID', 'Name'], // DragAndDropRank gets added in init if Drag and Drop is enabled for the workspace in the component's context
 
     fieldBlackList: [],
 
@@ -3049,12 +3088,12 @@ Ext.define('CA.technicalservices.userutilities.FieldPicker', {
 
     //This does not show the Rank column
 
-    constructor: function (config) {
+    constructor: function(config) {
         this.config = _.merge({}, this.config || {}, config || {});
         this.callParent([config]);
     },
 
-    initComponent: function () {
+    initComponent: function() {
 
         if (this.models) {
             this.on('click', this._createPopover, this);
@@ -3066,10 +3105,10 @@ Ext.define('CA.technicalservices.userutilities.FieldPicker', {
             Rally.data.ModelFactory.getModels({
                 types: this.modelNames,
                 context: this.context,
-                success: function (models) {
+                success: function(models) {
                     this.models = models;
                 },
-                failure: function (failedParam) {
+                failure: function(failedParam) {
                     console.log('failedparam');
                 },
                 scope: this
@@ -3082,14 +3121,14 @@ Ext.define('CA.technicalservices.userutilities.FieldPicker', {
             this.toolTipConfig = {
                 html: '<div style="color:red;">' + msg + '</div>'
             };
-            this.on('click', function () { Rally.ui.notify.Notifier.showError({ message: msg }); });
+            this.on('click', function() { Rally.ui.notify.Notifier.showError({ message: msg }); });
         }
         this.callParent(arguments);
     },
-    getFields: function () {
+    getFields: function() {
         return _.union(this._fields || [], this.alwaysSelectedValues);
     },
-    _getPickerConfig: function () {
+    _getPickerConfig: function() {
         var pickerConfig;
         pickerConfig = _.extend({
             value: this._fields,
@@ -3101,7 +3140,7 @@ Ext.define('CA.technicalservices.userutilities.FieldPicker', {
         return pickerConfig;
     },
 
-    _createPopover: function (btn) {
+    _createPopover: function(btn) {
         var popoverTarget = btn.getEl();
 
         this.popover = Ext.create('Rally.ui.popover.Popover', {
@@ -3112,33 +3151,33 @@ Ext.define('CA.technicalservices.userutilities.FieldPicker', {
             buttonAlign: 'center',
             title: this.getTitle(),
             listeners: {
-                destroy: function () {
+                destroy: function() {
                     this.popover = null;
                 },
                 scope: this
             },
             buttons: [{
-                xtype: "rallybutton",
-                text: 'Apply',
-                cls: 'field-picker-apply-btn primary rly-small',
-                listeners: {
-                    click: function () {
-                        this._onApply(this.popover);
-                    },
-                    scope: this
+                    xtype: "rallybutton",
+                    text: 'Apply',
+                    cls: 'field-picker-apply-btn primary rly-small',
+                    listeners: {
+                        click: function() {
+                            this._onApply(this.popover);
+                        },
+                        scope: this
+                    }
+                },
+                {
+                    xtype: "rallybutton",
+                    text: 'Cancel',
+                    cls: 'field-picker-cancel-btn secondary dark rly-small',
+                    listeners: {
+                        click: function() {
+                            this.popover.close();
+                        },
+                        scope: this
+                    }
                 }
-            },
-            {
-                xtype: "rallybutton",
-                text: 'Cancel',
-                cls: 'field-picker-cancel-btn secondary dark rly-small',
-                listeners: {
-                    click: function () {
-                        this.popover.close();
-                    },
-                    scope: this
-                }
-            }
             ],
             items: [
                 _.extend({
@@ -3152,7 +3191,7 @@ Ext.define('CA.technicalservices.userutilities.FieldPicker', {
                     selectedTextLabel: 'Selected',
                     availableTextLabel: 'Available',
                     listeners: {
-                        specialkey: function (field, e) {
+                        specialkey: function(field, e) {
                             if (e.getKey() === e.ESC) {
                                 this.popover.close();
                             }
@@ -3164,12 +3203,12 @@ Ext.define('CA.technicalservices.userutilities.FieldPicker', {
         });
     },
 
-    _getModelTypes: function () {
+    _getModelTypes: function() {
         return _.pluck(this._getModels(), 'typePath');
     },
 
-    _getModels: function () {
-        return _.reduce(this.models, function (accum, model) {
+    _getModels: function() {
+        return _.reduce(this.models, function(accum, model) {
             if (model.typePath === 'artifact') {
                 accum = accum.concat(model.getArtifactComponentModels());
             }
@@ -3180,7 +3219,7 @@ Ext.define('CA.technicalservices.userutilities.FieldPicker', {
         }, []);
     },
 
-    getTitle: function () {
+    getTitle: function() {
         return 'Show Columns';
     },
 
@@ -3191,26 +3230,26 @@ Ext.define('CA.technicalservices.userutilities.FieldPicker', {
      * @param {String[]|Object[]} fields A list of field names to display
      * @param {Boolean} true to suspend store load if it will be triggered elsewhere
      */
-    updateFields: function (fields, suspendLoad) {
+    updateFields: function(fields, suspendLoad) {
         this._fields = fields;
         if (this.popover && this.popover.down('rallyfieldpicker')) {
             this.popover.down('rallyfieldpicker').setValue(fields.join(','));
         }
         this.saveState();
     },
-    getState: function () {
+    getState: function() {
         return {
             fields: this._fields
         };
     },
-    applyState: function (state) {
+    applyState: function(state) {
         if (state) {
             this._fields = state.fields;
         }
     },
-    _onApply: function (popover) {
+    _onApply: function(popover) {
         var fieldPicker = popover.down('rallyfieldpicker'),
-            fields = _.map(fieldPicker.getValue(), function (field) {
+            fields = _.map(fieldPicker.getValue(), function(field) {
                 return field.get('name');
             });
 
@@ -4095,6 +4134,8 @@ Ext.define('CustomChartApp', {
     launch: function () {
         Rally.data.wsapi.Proxy.superclass.timeout = 240000;
 
+        this.settingView = true;
+
         if (!this.getSetting('types')) {
             this.fireEvent('appsettingsneeded'); //todo: does this work?
         }
@@ -4118,17 +4159,18 @@ Ext.define('CustomChartApp', {
                             scope: this
                         }).then({
                             scope: this,
-                            success: function () {
+                            success: async function () {
                                 plugin.addListener({
                                     scope: this,
-                                    select: this._addChart,
-                                    change: this._addChart
+                                    select: this.viewChange,
+                                    change: this.viewChange
                                 });
                                 this.addButtons();
 
                                 if (this.down('#chart-area').getHeight() < 260) {
-                                    this.down('#grid-area').setHeight((this.down('#grid-area').getHeight() + this.down('#chart-area').getHeight()) / 2)
+                                    this.down('#grid-area').setHeight((this.down('#grid-area').getHeight() + this.down('#chart-area').getHeight()) / 2);
                                 }
+                                await this._addSharedViewsCombo();
 
                                 this._addChart();
                             }
@@ -4162,6 +4204,7 @@ Ext.define('CustomChartApp', {
         this.addToggleBtn(buttonArea, margins);
         this.addFieldPickerBtn(buttonArea, margins);
         this.addExportBtn(buttonArea, margins);
+
     },
 
     addExportBtn: function (buttonArea, margins) {
@@ -4239,6 +4282,28 @@ Ext.define('CustomChartApp', {
                 scope: this
             }
         });
+    },
+
+    _addSharedViewsCombo: function () {
+        return new Promise(function (resolve) {
+            var compCount = this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).items.length;
+            this.down('#' + Utils.AncestorPiAppFilter.RENDER_AREA_ID).insert(compCount - 1, [
+                {
+                    xtype: 'rallysharedviewcombobox',
+                    title: 'Shared Views',
+                    itemId: 'customChartSharedViewCombobox',
+                    enableUrlSharing: true,
+                    context: this.getContext(),
+                    cmp: this,
+                    listeners: {
+                        ready: function (combo) {
+                            combo.setValue(null);
+                            resolve();
+                        }
+                    }
+                }
+            ]);
+        }.bind(this));
     },
 
     getFieldsFromButton: function () {
@@ -4351,6 +4416,8 @@ Ext.define('CustomChartApp', {
         var chartArea = this.down('#chart-area');
         chartArea.removeAll();
         this.down('#grid-area').removeAll();
+
+
         chartArea.setLoading(true);
 
         var context = this.getContext();
@@ -4383,11 +4450,36 @@ Ext.define('CustomChartApp', {
                     filters: filters,
                     context: dataContext,
                     enablePostGet: true
+                },
+                listeners: {
+                    viewchange: this.viewChange,
+                    scope: this
                 }
             };
 
             this.gridboard = chartArea.add(gridBoardConfig);
         });
+    },
+
+    viewChange() {
+        if (this.settingView) {
+            return;
+        }
+        if (!this.dontResetSharedViewCombo && this.down('#customChartSharedViewCombobox')) {
+            this.down('#customChartSharedViewCombobox').setValue(null);
+        }
+        this.dontResetSharedViewCombo = false;
+        //this._clearSharedViewCombo();
+        this._addChart();
+    },
+
+    _clearSharedViewCombo: function () {
+        let combo = this.down('#customChartSharedViewCombobox');
+        if (!this.settingView && combo) {
+            combo.setValue('');
+            combo._clearParameters();
+            combo.saveState();
+        }
     },
 
     setChartVariables: function () {
@@ -5010,6 +5102,47 @@ Ext.define('CustomChartApp', {
         }
         return defaultMessage;
     },
+
+    getCurrentView: function () {
+        let ancestorData = Rally.getApp().ancestorFilterPlugin._getValue();
+
+        // Delete piRecord to avoid recursive stack overflow error
+        delete ancestorData.piRecord;
+
+        let gridView = this.gridboard.getCurrentView();
+        // Getting State for Custom Field Picker
+        var fieldPicker = this.down('tsfieldpickerbutton')
+        let views = Ext.apply(fieldPicker.getState(), gridView, ancestorData);
+
+        // Getting State for Chart Toggle Button
+        views.chartToggleState = this.down('#chartGridToggleBtn').getState();
+        return views;
+    },
+
+    setCurrentView: function (view) {
+        var app = Rally.getApp();
+        app.settingView = true;
+        if (app.ancestorFilterPlugin) {
+            if (view.filterStates) {
+                app.ancestorFilterPlugin.mergeLegacyFilter(view.filterStates, view, app.models[0].typePath);
+            }
+            app.ancestorFilterPlugin.setCurrentView(view);
+        }
+
+        // Setting State for Chart Toggle Button
+        this.down('#chartGridToggleBtn').applyState(view.chartToggleState);
+        // Setting State for Custom Field Picker
+        this.down('tsfieldpickerbutton').applyState(view)
+
+        setTimeout(async function () {
+            // Ext.resumeLayouts(true);   
+            app.settingView = false;
+            app.dontResetSharedViewCombo = true;
+            app.viewChange();
+        }.bind(this), 2000);
+    }
+
+
 });
 
 
